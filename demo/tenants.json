@@ -1,0 +1,25 @@
+{
+  "datasource": {
+    "type": "database",
+    "name": "mydb",
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "password"
+  },
+  "tenants": [
+    {
+      "id": "tenant1",
+      "name": "Tenant One",
+      "subdomain": "tenant1",
+      "plugins": ["dashboard", "sqlite", "denokv", "blog", "analytics"],
+      "enabled": true,
+      "config": {
+        "database": {
+          "type": "sqlite",
+          "connection": "./data/tenant1.db"
+        }
+      }
+    }
+  ]
+}
