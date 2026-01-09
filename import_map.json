@@ -14,18 +14,33 @@
         "eta": "https://deno.land/x/eta@v4.5.0/src/index.ts",
         "mysql": "https://deno.land/x/mysql@v2.12.1/mod.ts",
         "sqlite": "https://deno.land/x/sqlite@v3.9.1/mod.ts",
-        "@denoboot/oak/": "./packages/denoboot-oak-engine/",
-        "@denoboot/engine-core/": "./packages/denoboot-engine-core/",
-        "@denoboot/runtime/": "./packages/denoboot-runtime/",
-        "@denoboot/oak-plugins/": "./packages/denoboot-oak-engine-plugins/",
-        "@denoboot/di/": "./packages/denoboot-di/",
-        "@denoboot/utils/": "./packages/denoboot-utils/",
+
+        "@denoboot/admin/": "./packages/denoboot-admin/",
+        "@denoboot/auth/": "./packages/denoboot-auth/",
+        "@denoboot/cli/": "./packages/denoboot-cli/",
         "@denoboot/config/": "./packages/denoboot-config/",
-        "@denoboot/types/": "./packages/denoboot-types/", 
-        "@denoboot/logger/": "./packages/denoboot-logger/",
+        "@denoboot/db/": "./packages/denoboot-db/",
+        "@denoboot/di/": "./packages/denoboot-di/",
+        "@denoboot/engine/": "./packages/denoboot-engine-core/",
         "@denoboot/events/": "./packages/denoboot-events/",
+        "@denoboot/logger/": "./packages/denoboot-logger/",
+        "@denoboot/migrations/": "./packages/denoboot-migrations/",
+        "@denoboot/models/": "./packages/denoboot-models/",
+        "@denoboot/permissions/": "./packages/denoboot-permissions/",
+        "@denoboot/runtime/": "./packages/denoboot-runtime/",
+        "@denoboot/types/": "./packages/denoboot-types/",
+        "@denoboot/utils/": "./packages/denoboot-utils/",
+
         "@denoboot/x/": "./packages-internal/denoboot-dependencies/",
         "@denoboot/database-engine/": "./labs/tenant-database-engine/",
-        "@denoboot/database-query/": "./labs/universal-database-query/"
+        "@denoboot/database-query/": "./labs/universal-database-query/",
+
+        "@denoboot/oak/": "./packages-engines/denoboot-oak-engine/",
+
+        "@denoboot/denokv-plugin/": "./packages-engine-plugins/denoboot-denokv-plugin/",
+        "@denoboot/mysql-plugin/": "./packages-engine-plugins/denoboot-mysql-plugin/",
+        "@denoboot/sqlite-plugin/": "./packages-engine-plugins/denoboot-sqlite-plugin/",
+        "@denoboot/oak-dashboard-plugin/": "./packages-engine-plugins/denoboot-oak-dashboard-plugin/",
+        "@denoboot/oak-fs-router-plugin/": "./packages-engine-plugins/denoboot-oak-fs-router-plugin/"
     }
 }

@@ -11,6 +11,8 @@
   "workspace": [
     "packages/*",
     "packages-internal/*",
+    "packages-engine-plugins/*",
+    "packages-engines/*",
     "labs/*",
     "demo/"
   ],

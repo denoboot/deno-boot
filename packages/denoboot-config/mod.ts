@@ -8,7 +8,7 @@
 
 import type { DenoBootConfig, DefineConfig } from "@denoboot/types/mod.ts";
 import { deepMerge, fileExists, loadJSON } from "@denoboot/utils/mod.ts";
-import type { Tenant } from "@denoboot/engine-core/tenant_manager.ts";
+import type { Tenant } from "@denoboot/engine/tenant-manager.ts";
 
 
 const DEFAULT_CONFIG: DenoBootConfig = {
@@ -142,8 +142,7 @@ export class ConfigLoader {
     if (typeof $.env === "string") {
       try {
         $.env = ConfigLoader.readEnvFile($.env, true);
-      } catch (error) {
-        console.info(error);
+      } catch (_) {
         $.env = {};
       }
     } else if (typeof $.env === "object") {

@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import type { Container } from "@denoboot/di/mod.ts";
-import type { Tenant } from "./tenant_manager.ts";
+import type { Tenant } from "./tenant-manager.ts";
 
 
 export interface MiddlewareFactory<T extends AnyMiddleware = AnyMiddleware> extends EnhancedMiddleware<T> {

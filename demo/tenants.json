@@ -12,7 +12,7 @@
       "id": "tenant1",
       "name": "Tenant One",
       "subdomain": "tenant1",
-      "plugins": ["dashboard", "sqlite", "denokv", "blog", "analytics"],
+      "plugins": ["oak-dashboard", "oak-fs-router", "sqlite", "denokv", "blog", "analytics"],
       "enabled": true,
       "config": {
         "database": {

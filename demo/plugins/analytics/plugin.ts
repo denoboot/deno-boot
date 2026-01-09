@@ -7,7 +7,7 @@
 import { Container } from "@denoboot/di/mod.ts";
 import { Logger } from "@denoboot/logger";
 import { CacheDriver, DatabaseDriver } from "@denoboot/types";
-import { defineOakPlugin } from "@denoboot/oak";
+import { defineOakPlugin } from "@denoboot/oak/mod.ts";
 
 export const AnalyticsPlugin = defineOakPlugin({
   name: "analytics",
@@ -170,7 +170,7 @@ class AnalyticsService {
     }
 
     // Store in database
-    const db = this.container.resolve<DatabaseDriver>("db");
+    const db = this.container.resolve<DatabaseDriver>("db.sqlite");
 
     try {
       await db.execute(
@@ -187,7 +187,7 @@ class AnalyticsService {
   }
 
   async getEvents(limit = 100): Promise<any[]> {
-    const db = this.container.resolve<DatabaseDriver>("db");
+    const db = this.container.resolve<DatabaseDriver>("db.sqlite");
 
     try {
       return await db.query(

@@ -7,7 +7,7 @@
 
 import type { Container } from "@denoboot/di/mod.ts";
 import type { Logger } from "@denoboot/logger/mod.ts";
-import type { TenantManager } from "./tenant_manager.ts";
+import type { TenantManager } from "./tenant-manager.ts";
 import type { AnyMiddleware, EnhancedMiddleware } from "./middleware.ts";
 
 

@@ -1,0 +1,9 @@
+{
+  "name": "@denoboot/mysql-plugin",
+  "version": "0.1.0",
+  "description": "MySQL plugin for DenoBoot engines",
+  "exports": {
+    ".": "./mod.ts",
+    "./plugin": "./plugin.ts"
+  }
+}

@@ -8,8 +8,8 @@ import { Container } from "@denoboot/di/mod.ts";
 import { Logger } from "@denoboot/logger";
 import { EventEmitter } from "@denoboot/events";
 import { DatabaseDriver } from "@denoboot/types";
-import { defineOakPlugin } from "@denoboot/oak";
-import { WorkerManager } from "@denoboot/engine-core/worker_manager.ts";
+import { defineOakPlugin } from "@denoboot/oak/mod.ts";
+import { WorkerManager } from "@denoboot/engine/worker-manager.ts";
 
 export const BlogPlugin = defineOakPlugin({
   name: "blog",
@@ -46,14 +46,21 @@ export const BlogPlugin = defineOakPlugin({
     {
       method: "GET",
       path: "/blog",
-      tenant: false,
-      name: "blog-list",
-      handler() {
-        return async (ctx) => {
-        console.log(ctx.state.session?.tenant);
-        // ctx.response.redirect('/tenant/tenant1/blog');
-        ctx.response.body = {}
-      }
+      tenant: true,
+      handler: (kwargs) => async (ctx) => {
+        const blog = kwargs.container.resolve<BlogService>("blog");
+        const posts = await blog.listPosts();
+        const views = kwargs.container.resolve("views");
+
+        const html = await views.render("blog/list", {
+          posts,
+          tenant: ctx.state.tenant,
+        }, {
+          plugin: "blog",
+        });
+
+        ctx.response.type = "text/html";
+        ctx.response.body = html;
       },
     },
     {

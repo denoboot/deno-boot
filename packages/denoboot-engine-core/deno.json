@@ -1,8 +1,8 @@
 {
-  "name": "@denoboot/engine-core",
+  "name": "@denoboot/engine",
   "version": "0.1.0",
   "description": "Core engine contract for DenoBoot",
   "exports": {
-    ".": "./engine.ts"
+    ".": "./mod.ts"
   }
 }

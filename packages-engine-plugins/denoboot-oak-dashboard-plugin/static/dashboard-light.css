@@ -1,0 +1,65 @@
+/* ===========================
+   DENO LIGHT THEME
+   =========================== */
+
+html[data-theme="light"] body {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+/* Header */
+html[data-theme="light"] header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+html[data-theme="light"] h1 {
+  color: #0f766e; /* Deno teal (darkened for contrast) */
+}
+
+/* Tenant badge */
+html[data-theme="light"] .tenant-badge {
+  background: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 100%);
+  color: #042f2e;
+}
+
+/* Cards */
+html[data-theme="light"] .card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+/* Card headers */
+html[data-theme="light"] .card h2 {
+  color: #111827;
+}
+
+/* Stats */
+html[data-theme="light"] .stat {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+html[data-theme="light"] .stat-label {
+  color: #6b7280;
+}
+
+html[data-theme="light"] .stat-value {
+  color: #0f766e;
+}
+
+/* Buttons */
+html[data-theme="light"] .btn {
+  background: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 100%);
+  color: #042f2e;
+}
+
+html[data-theme="light"] .btn:hover {
+  box-shadow: 0 6px 16px rgba(45, 212, 191, 0.3);
+}
+
+/* Config / Code blocks */
+html[data-theme="light"] .config {
+  background: #f9fafb;
+  color: #0f172a;
+  border: 1px solid #e5e7eb;
+}

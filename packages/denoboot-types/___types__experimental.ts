@@ -2,17 +2,15 @@
 
 import { ApplicationOptions, Context, ListenOptions, Middleware, RouterOptions } from "@denoboot/x/oak.ts";
 import type {DenoBootRuntimeConfig } from "@denoboot/runtime/mod.ts";
-import { ServerRequest } from "https://jsr.io/@oak/oak/17.2.0/types.ts";
-import { Plugin } from "@denoboot/x/esbuild.ts";
 import { Container } from "@denoboot/di/mod.ts";
-import { PluginManager } from "@denoboot/engine/plugin_manager.ts";
-import { TenantManager, Tenant, TenantResolver } from "@denoboot/engine/mod.ts";
-import { ViewEngine } from "@denoboot/engine/view_engine.ts";
-import { WorkerManager } from "@denoboot/engine/worker_manager.ts";
+import { DenoBootEnginePlugin, PluginManager } from "@denoboot/engine/plugin-manager.ts";
+import { TenantManager, Tenant, TenantResolver } from "@denoboot/engine/tenant-manager.ts";
+import { ViewEngine } from "@denoboot/engine/view-engine.ts";
+import { WorkerManager } from "@denoboot/engine/worker-manager.ts";
 import { Logger, LoggerOptions } from "@denoboot/logger/mod.ts";
 
 
-
+type ServerRequest = any;
 export interface BootstrapOptionsV2 {
   env?: string | Record<string, any>;
   engine?: {
@@ -32,7 +30,7 @@ export interface BootstrapOptionsV2 {
     tenantManager?: TenantManager;
     workerManager?: WorkerManager;
     viewEngine?: ViewEngine;
-    plugins?: Plugin[];
+    plugins?: DenoBootEnginePlugin[];
     tenants?: string | Tenant[];
     middleware?: Middleware[];
     tenantResolver?: TenantResolver;
@@ -53,42 +51,42 @@ export interface BootstrapOptionsV2 {
   };
 }
 
-const myConfigExamples: BootstrapOptionsV2 = {
-  engine: {
-    listener: { port: 3000,},
-    plugins: [],
-    middleware: [],
-    tenants: './tenants.json',
-    tenantResolver: {
-      resolve: async (ctx: Context) => {
-        return {'id': 'default', 'name': 'default', 'config': {}, 'plugins': []};
-      }
-    }
-  },
-  runtime: {
-    client: {
-      esbuild: {
-        entry: './demo/app/client.ts',
-        root: "./demo/app",
-        mode: "development",
-        configPath: "./demo/app/runtime.config.ts",
-        server: {
-          port: 0,
-          host: ""
-        },
-        build: {
-          outDir: "./demo/app/build",
-          splitting: false,
-          external: [],
-          sourcemap: false,
-          minify: false
-        },
-        hmr: {
-          port: 0,
-          host: ""
-        },
-        plugins: []
-      }
-    }
-  }
-}
+// const myConfigExamples: BootstrapOptionsV2 = {
+//   engine: {
+//     listener: { port: 3000,},
+//     plugins: [],
+//     middleware: [],
+//     tenants: './tenants.json',
+//     tenantResolver: {
+//       resolve: async (ctx: Context) => {
+//         return {'id': 'default', 'name': 'default', 'config': {}, 'plugins': []};
+//       }
+//     }
+//   },
+//   runtime: {
+//     client: {
+//       esbuild: {
+//         entry: './demo/app/client.ts',
+//         root: "./demo/app",
+//         mode: "development",
+//         configPath: "./demo/app/runtime.config.ts",
+//         server: {
+//           port: 0,
+//           host: ""
+//         },
+//         build: {
+//           outDir: "./demo/app/build",
+//           splitting: false,
+//           external: [],
+//           sourcemap: false,
+//           minify: false
+//         },
+//         hmr: {
+//           port: 0,
+//           host: ""
+//         },
+//         plugins: []
+//       }
+//     }
+//   }
+// }

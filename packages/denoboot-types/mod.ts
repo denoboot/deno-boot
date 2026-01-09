@@ -4,9 +4,8 @@
 //  * These interfaces define the contracts for all engine components
 //  */
 
-import type { Context, Middleware } from "@denoboot/x/oak.ts";
 import type { LoggerOptions } from "@denoboot/logger/mod.ts";
-import { Container } from "@denoboot/di/mod.ts";
+import type { Container } from "@denoboot/di/mod.ts";
 
 /**
  * Base configuration for the engine
@@ -75,7 +74,7 @@ export interface BootstrapOptions {
   plugins?: any[];
   tenants?: any[];
   tenantsFile?: string;
-  middleware?: Middleware[];
+  middleware?: any[];
   tenantResolver?: any;
   container?: Container;
   env?: string | Record<string, any>;
