@@ -1,6 +1,6 @@
 # denoboot
 
-![Deno Boot Logo](image.png)
+<img src="image.png" width="100" alt="Deno Boot Logo" style="display: block; margin: 0 auto; padding: 2rem; border-radius: 50%;" />
 
 > **⚠️ Status: Early Development / Unstable**
 >
