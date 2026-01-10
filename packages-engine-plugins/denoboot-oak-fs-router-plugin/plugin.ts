@@ -22,8 +22,6 @@ export const OakFsRouterPlugin = defineOakPlugin({
     const logger = container.resolve<Logger>("logger");
     const events = container.resolve<EventEmitter>("events");
 
-    logger.info("Initializing fileSystemRouter plugin");
-
     // Register fileSystemRouter service factory for each tenant
     container.registerFactory("fileSystemRouter", (c) => {
       return new FileSystemRouterService(c);

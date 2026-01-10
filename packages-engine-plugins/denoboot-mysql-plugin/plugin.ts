@@ -22,8 +22,6 @@ export const MySQLPlugin = defineBootPlugin({
     const logger = container.resolve<Logger>("logger");
     const events = container.resolve<EventEmitter>("events");
 
-    logger.info("Initializing MySQL plugin");
-
     // Register factory for MySQL driver
     container.registerFactory("db.mysql", (c) => {
       const tenant = c.has("tenant") ? c.resolve("tenant") : null;

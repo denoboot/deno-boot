@@ -22,8 +22,6 @@ export const DenoKVPlugin = defineBootPlugin({
     const logger = container.resolve<Logger>("logger");
     const events = container.resolve<EventEmitter>("events");
 
-    logger.info("Initializing Deno KV plugin");
-
     // Register factory for Deno KV driver (database)
     container.registerFactory("db.denokv", (c) => {
       const tenant = c.has("tenant") ? c.resolve("tenant") : null;

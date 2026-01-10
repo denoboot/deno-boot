@@ -20,11 +20,8 @@ export const SQLitePlugin = defineBootPlugin({
     const logger = container.resolve<Logger>("logger");
     const events = container.resolve<EventEmitter>("events");
 
-    logger.info("Initializing SQLite plugin");
-
     // Register factory for SQLite driver
     container.registerFactory("db.sqlite", (c) => {
-      console.log("Container services", c.list());
       const tenant = c.has("tenant") ? c.resolve("tenant") : null;
       
       if (!tenant) {
@@ -36,12 +33,12 @@ export const SQLitePlugin = defineBootPlugin({
         throw new Error("Tenant does not have SQLite configuration");
       }
 
-      return new SQLiteDriver(dbConfig.connection as string, logger);
+      return new SQLiteDriver(dbConfig.connection, logger);
     });
 
     // Listen for tenant initialization
     events.on("tenant:initialized", async (data: any) => {
-      const { tenant, container: tenantContainer } = data;
+      const { tenant, container: tenantContainer } = data || {};
       
       if (tenant.config.database?.type === "sqlite") {
         logger.debug(`Setting up SQLite for tenant: ${tenant.id}`);
@@ -53,7 +50,7 @@ export const SQLitePlugin = defineBootPlugin({
           // Register as 'db' for easy access
           tenantContainer.register("db", driver);
           
-          logger.info(`SQLite connected for tenant: ${tenant.id}`);
+          logger.debug(`SQLite connected for tenant: ${tenant.id}`);
         } catch (error) {
           logger.error(`Failed to connect SQLite for tenant ${tenant.id}`, {
             error: (error as Error).message,
@@ -61,11 +58,12 @@ export const SQLitePlugin = defineBootPlugin({
         }
       }
     });
+    await Promise.resolve();
   },
 
   async shutdown(container): Promise<void> {
     const logger = container.resolve<Logger>("logger");
-    logger.info("Shutting down SQLite plugin");
+    logger.debug("Shutting down SQLite plugin");
     
     // Disconnect all tenant databases
     const tenantManager = container.resolve("tenantManager");

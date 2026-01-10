@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 // modules/logger.ts
 /**
  * Logger module
@@ -14,6 +15,8 @@ export interface LoggerOptions {
 }
 
 export interface Logger {
+  log(message: string, meta?: Record<string, unknown>): void;
+  log(message: string, ...meta: any[]): void;
   debug(message: string, meta?: Record<string, unknown>): void;
   debug(message: string, ...meta: any[]): void;
   info(message: string, meta?: Record<string, unknown>): void;
@@ -50,16 +53,12 @@ export class ConsoleLogger implements Logger {
 
   constructor(
     level: LogLevel | string = "info",
-    prefix: string | undefined = `[${this.getRootDirname()}]`,
+    prefix: string | undefined,
     useColors: boolean = true
   ) {
     this.level = level;
     this.prefix = prefix || "";
     this.useColors = useColors && Deno.stdout.isTerminal();
-  }
-
-  private getRootDirname() {
-    return Deno.cwd().split('/').pop() || "";
   }
 
   private shouldLog(level: LogLevel | string): boolean {
@@ -77,28 +76,42 @@ export class ConsoleLogger implements Logger {
     const levelUpper = level.toUpperCase().padEnd(5).trim();
     
     let output = "";
+    const color = LOG_COLORS[level as LogLevel];
+    const reset = LOG_COLORS.reset;
+    const dim = LOG_COLORS.dim;
+    const bold = LOG_COLORS.bold;
 
     if (this.useColors) {
-      const color = LOG_COLORS[level as LogLevel];
-      const reset = LOG_COLORS.reset;
-      const dim = LOG_COLORS.dim;
-      const bold = LOG_COLORS.bold;
-      
-      output = `${dim}${timestamp}${reset} ${color}[${levelUpper}]${reset} ${this.prefix}\n${bold}${message}${reset}\n`;
+      if (this.prefix) {
+        output = `${dim}${timestamp}${reset} ${bold}${color}[${levelUpper}]${reset} ${bold}${this.prefix}${reset} ${color}${message}${reset}`;
+      } else {
+        output = `${dim}${timestamp}${reset} ${bold}${color}[${levelUpper}]${reset} ${color}${message}${reset}`;
+      }
     } else {
-      output = `${timestamp} [${levelUpper}] ${this.prefix}\n${message}\n`;
+      if (this.prefix) {
+        output = `${dim}${timestamp}${reset} ${bold}[${levelUpper}]${reset} ${bold}${this.prefix}${reset} ${message}`;
+      } else {
+        output = `${dim}${timestamp}${reset} ${bold}[${levelUpper}]${reset} ${message}`;
+      }
     }
 
-    if (meta && Array.isArray(meta)) {
-      const metaStr = JSON.stringify(meta, this.safeJsonReplacer(), 2);
-      const indent = "  ";
-      output += `\n${indent}${metaStr.split("\n").join("\n" + indent)}`;
-    }
-    
-    if (meta && Object.keys(meta).length > 0) {
-      const metaStr = JSON.stringify(meta, this.safeJsonReplacer(), 2);
-      const indent = "  ";
-      output += `\n${indent}${metaStr.split("\n").join("\n" + indent)}`;
+    if (Array.isArray(meta)) {
+      const indent = "    ";
+      for (const item of meta) {
+        if (typeof item === "object" && item !== null) {
+          const indent = "    ";
+          for (const key in item) {
+            output += `\n${indent}${color}${key}:${reset} ${color}${item[key]}${reset}`;
+          }
+        } else {
+          output += `\n${indent}${color}${item}${reset}`;
+        }
+      }
+    } else if (typeof meta === "object" && meta !== null) {
+      const indent = "    ";
+      for (const key in meta) {
+        output += `\n${indent}${color}${key}:${reset} ${color}${meta[key]}${reset}`;
+      }
     }
     
     return output;
@@ -133,6 +146,10 @@ export class ConsoleLogger implements Logger {
       
       return value;
     };
+  }
+
+  log(...data: any[]): void {
+    console.log(...data);
   }
 
   debug(message: string, meta?: Record<string, unknown> | any[]): void {
@@ -180,6 +197,7 @@ export class ConsoleLogger implements Logger {
  * Null logger that does nothing (useful for testing)
  */
 export class NullLogger implements Logger {
+  log(..._data: any[]): void {}
   debug(): void {}
   info(): void {}
   warn(): void {}
@@ -202,23 +220,27 @@ export class MemoryLogger implements Logger {
   private level: LogLevel = "info";
   protected prefix: string = "[Test]";
 
+  log(..._data: any[]): void {
+    // Don't log to console, just store in memory
+  }
+
   debug(message: string, meta?: Record<string, unknown> | any[]): void {
-    this.log("debug", message, meta);
+    this._log("debug", message, meta);
   }
 
   info(message: string, meta?: Record<string, unknown> | any[]): void {
-    this.log("info", message, meta);
+    this._log("info", message, meta);
   }
 
   warn(message: string, meta?: Record<string, unknown> | any[]): void {
-    this.log("warn", message, meta);
+    this._log("warn", message, meta);
   }
 
   error(message: string, meta?: Record<string, unknown> | any[]): void {
-    this.log("error", message, meta);
+    this._log("error", message, meta);
   }
 
-  private log(level: LogLevel, message: string, meta?: Record<string, unknown> | any[]): void {
+  private _log(level: LogLevel, message: string, meta?: Record<string, unknown> | any[]): void {
     if (LOG_LEVELS[level] >= LOG_LEVELS[this.level]) {
       this.logs.push({
         level,

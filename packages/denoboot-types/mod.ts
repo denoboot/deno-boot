@@ -76,7 +76,7 @@ export interface BootstrapOptions {
   tenantsFile?: string;
   middleware?: any[];
   tenantResolver?: any;
-  container?: Container;
+  container?: any;
   env?: string | Record<string, any>;
   deno?:
     | Record<string, any>

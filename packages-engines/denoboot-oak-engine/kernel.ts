@@ -18,7 +18,7 @@ import { ConfigLoader } from "@denoboot/config/mod.ts";
 import { createLogger, type Logger } from "@denoboot/logger/mod.ts";
 import { createEventEmitter, type EventEmitter } from "@denoboot/events/mod.ts";
 import type { BootstrapOptions, DenoBootConfig } from "@denoboot/types/mod.ts";
-import { bootstrapConfigParser } from "@denoboot/utils/mod.ts";
+import { BannerOptions, bootstrapConfigParser, createBanner } from "@denoboot/utils/mod.ts";
 import type { DenoBootEngine } from "@denoboot/engine/engine.ts";
 import  { WorkerManager, type WorkerPayload } from "@denoboot/engine/worker-manager.ts";
 import  { type ViewEngine , EtaViewEngine} from "@denoboot/engine/view-engine.ts";
@@ -77,6 +77,10 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     this.viewEngine = new EtaViewEngine(this.logger, config.viewPaths || []);
     this.eventEmitter = createEventEmitter();
 
+    
+    // Register core services
+    this.registerCoreServices();
+
     // Initialize tenant manager
     this.tenantManager = new TenantManager(
       this.container,
@@ -92,8 +96,6 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
       this.logger
     );
 
-    // Register core services
-    this.registerCoreServices();
   }
 
   /**
@@ -109,6 +111,10 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     this.container.register("workers", this.workerManager);
     this.container.register("views", this.viewEngine);
     this.container.register("router", this.router);
+  }
+
+  createBanner(name: string, options?: BannerOptions) {
+    console.log(createBanner(name, options));
   }
 
   setContainer(container: OakEngineContainer): void {
@@ -171,7 +177,6 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
       throw new Error("Kernel already initialized");
     }
 
-
     // Initialize plugins
     await this.pluginManager.initialize(this.container);
 
@@ -199,11 +204,11 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
       throw new Error("Kernel already booted");
     }
 
-    // Boot plugins
-    await this.pluginManager.boot(this.container);
-
     // Initialize tenant services
     await this.tenantManager.initializeTenantServices();
+
+    // Boot plugins
+    await this.pluginManager.boot(this.container);
 
     // Setup Oak application
     this.setupApplication();
@@ -275,8 +280,11 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
       const start = Date.now();
       await next();
       const ms = Date.now() - start;
-      this.logger.info(
-        `${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} (${ms}ms)`
+
+      const logLevel = ctx.response.status >= 500 ? "error" : ctx.response.status >= 400 ? "warn" : "info";
+
+      this.logger[logLevel](
+        `${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} (${ms}ms)`,
       );
     });
 
@@ -305,7 +313,9 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     });
   }
 
-  async bootLogDiagnostics() {
+  async bootLogDiagnostics(enabled = false) {
+    if (!enabled) return;
+    
     // Print diagnostic information
     console.log("\n" + "═".repeat(70));
     console.log("🎉 DenoBoot Engine Ready");
@@ -401,8 +411,7 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
    * Shutdown the kernel
    */
   async shutdown(): Promise<void> {
-    this.logger.info("Shutting down Oak kernel...");
-
+    this.app.addEventListener("close", this._shutdown);
     Deno.addSignalListener("SIGINT", this._shutdown);
     Deno.addSignalListener("SIGTERM", this._shutdown);
 
@@ -411,7 +420,7 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
 
   // Graceful shutdown
   private async _shutdown(): Promise<void> {
-    const logger = this.container.resolve<Logger>("logger");
+    const logger = this.container.resolve("logger");
     logger.info("Received shutdown signal");
 
     await this.pluginManager.shutdown(this.container);
@@ -500,19 +509,17 @@ export async function oakEngine<AS extends Record<PropertyKey, any> = Record<str
 ): Promise<OakKernel<AS>> {
   const cfg = await bootstrapConfigParser(options);
 
-  const logger = createLogger(cfg.config?.logger);
-
   // Validate configuration
   ConfigLoader.validate(cfg.config);
 
   // Create kernel
   const kernel = new OakKernel<AS>(cfg.config);
-
+  
   // Use custom container if provided
   if (cfg.container) {
     // Transfer services to custom container
     // (This is advanced usage)
-    // kernel.setContainer(options.container);
+    kernel.setContainer(cfg.container);
   }
 
   // Set custom tenant resolver
@@ -544,6 +551,8 @@ export async function oakEngine<AS extends Record<PropertyKey, any> = Record<str
       kernel.use(middleware);
     }
   }
+
+  
 
   // Initialize and boot
   await kernel.initialize();

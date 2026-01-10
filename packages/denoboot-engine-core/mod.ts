@@ -6,6 +6,7 @@ import type { DenoBootRouteDefinition } from "./router.ts";
 
 export * from "./engine.ts";
 export * from "./middleware.ts";
+export * from "./tenant-manager.ts";
 export * from "./plugin-manager.ts";
 export * from "./worker-manager.ts";
 export * from "./router.ts";

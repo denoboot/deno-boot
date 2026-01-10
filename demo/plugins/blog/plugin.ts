@@ -21,8 +21,6 @@ export const BlogPlugin = defineOakPlugin({
     const logger = container.resolve<Logger>("logger");
     const events = container.resolve<EventEmitter>("events");
 
-    logger.info("Initializing blog plugin");
-
     // Register blog service factory for each tenant
     container.registerFactory("blog", (c) => {
       return new BlogService(c);

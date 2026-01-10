@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -296,6 +296,11 @@ Write your post here using **markdown** syntax..."></textarea>
         alert('Error: ' + error.message);
       }
     });
+  </script>
+  <script type="module">
+    // system theme or light
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', systemTheme);
   </script>
 </body>
 </html>

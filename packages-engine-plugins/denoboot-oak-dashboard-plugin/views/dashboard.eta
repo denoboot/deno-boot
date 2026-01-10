@@ -109,5 +109,10 @@
   const dashboard = new Dashboard(document);
   dashboard.init();
 </script>
+<script type="module">
+// system theme or light
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', systemTheme);
+</script>
 </body>
 </html>

@@ -136,8 +136,6 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
    * Initialize all registered plugins
    */
   async initialize(container: TContainer) {
-    this.logger.info("Initializing plugins...");
-
     // Sort plugins by dependencies
     const sorted = this.topologicalSort();
 
@@ -155,16 +153,12 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
       loaded.initialized = true;
       this.logger.debug(`Plugin initialized: ${name}`);
     }
-
-    this.logger.info("All plugins initialized");
   }
 
   /**
    * Boot all initialized plugins
    */
   async boot(container: TContainer) {
-    this.logger.info("Booting plugins...");
-
     const sorted = this.topologicalSort();
 
     for (const name of sorted) {
@@ -185,16 +179,12 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
       loaded.booted = true;
       this.logger.debug(`Plugin booted: ${name}`);
     }
-
-    this.logger.info("All plugins booted");
   }
 
   /**
    * Shutdown all plugins
    */
   async shutdown(container: TContainer) {
-    this.logger.info("Shutting down plugins...");
-
     // Reverse order for shutdown
     const sorted = this.topologicalSort().reverse();
 
@@ -213,8 +203,6 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
         }
       }
     }
-
-    this.logger.info("All plugins shut down");
   }
 
   /**

@@ -2,12 +2,12 @@
 
 import { oakEngine } from "@denoboot/oak/mod.ts";
 
-const engine = await oakEngine();
+const boot = await oakEngine();
 
 // These examples below are accessing internal services directly from the container
 // This is useful for testing and debugging, but in production you should use the plugin system
 
-const router = engine.getRouter();
+const router = boot.getRouter();
 
 router.register({
   method: "GET",
@@ -146,5 +146,5 @@ router.register({
 
 
 // Start the server
-await engine.listen();
-// await engine.shutdown();
+await boot.listen();
+// await boot.shutdown();

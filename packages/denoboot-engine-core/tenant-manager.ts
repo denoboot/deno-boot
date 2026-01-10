@@ -6,6 +6,7 @@
 
 import type { Container } from "@denoboot/di/mod.ts";
 import type { Logger } from "@denoboot/logger/mod.ts";
+import { EventEmitter } from "@denoboot/events";
 
 export interface Tenant {
   id: string;
@@ -103,7 +104,7 @@ export class DefaultTenantResolver implements TenantResolver {
     // Try to resolve from context first (pre-resolved tenant)
     if (context.tenant) {
       this.logger?.debug("Tenant already in context", { id: context.tenant.id });
-      return context.tenant;
+      return await Promise.resolve(context.tenant);
     }
 
     // Try tenant ID in context (from URL params)
@@ -114,7 +115,7 @@ export class DefaultTenantResolver implements TenantResolver {
           id: tenant.id, 
           name: tenant.name 
         });
-        return tenant;
+        return await Promise.resolve(tenant);
       }
     }
 
@@ -137,7 +138,7 @@ export class DefaultTenantResolver implements TenantResolver {
           id: tenant.id, 
           name: tenant.name 
         });
-        return tenant;
+        return await Promise.resolve(tenant);
       }
       
       // Subdomain match (extract first part)
@@ -150,7 +151,7 @@ export class DefaultTenantResolver implements TenantResolver {
           id: tenant.id, 
           name: tenant.name 
         });
-        return tenant;
+        return await Promise.resolve(tenant);
       }
     }
 
@@ -165,7 +166,7 @@ export class DefaultTenantResolver implements TenantResolver {
           id: tenant.id, 
           name: tenant.name 
         });
-        return tenant;
+        return await Promise.resolve(tenant);
       }
     }
 
@@ -181,7 +182,7 @@ export class DefaultTenantResolver implements TenantResolver {
             id: tenant.id, 
             name: tenant.name 
           });
-          return tenant;
+          return await Promise.resolve(tenant);
         } else {
           this.logger?.warn("Tenant ID in path not found", { 
             path: context.path,
@@ -203,7 +204,7 @@ export class DefaultTenantResolver implements TenantResolver {
 
 
     // TODO: Implement fallback tenant resolution or return null ????????
-    return Array.from(this.tenants.values())[0];
+    return await Promise.resolve(null);
   }
 
   getTenant(id: string): Tenant | null {
@@ -243,7 +244,7 @@ export class TenantManager {
   private containers = new Map<string, Container>();
   private logger: Logger;
   private globalContainer: Container;
-  private eventEmitter?: any;
+  private eventEmitter?: EventEmitter;
 
   constructor(
     globalContainer: Container,
@@ -266,6 +267,8 @@ export class TenantManager {
       }
     } catch {
       // Events not available
+      this.logger.error("Events not available for tenant manager");
+      throw new Error("Events not available for tenant manager");
     }
   }
 
@@ -307,7 +310,6 @@ export class TenantManager {
    * Register multiple tenants
    */
   registerTenants(tenants: Tenant[]): void {
-    this.logger.info(`Registering ${tenants.length} tenants...`);
     for (const tenant of tenants) {
       this.registerTenant(tenant);
     }
@@ -335,7 +337,7 @@ export class TenantManager {
         error: error instanceof Error ? error.message : String(error),
         context,
       });
-      return this.listTenants()[0];
+      return null;
     }
   }
 
@@ -359,8 +361,8 @@ export class TenantManager {
   /**
    * Get tenant-specific container
    */
-  getContainer(tenantId: string): Container | null {
-    return this.containers.get(tenantId) || null;
+  getContainer<TContainer extends Container>(tenantId: string): TContainer | null {
+    return this.containers.get(tenantId) as TContainer || null;
   }
 
   /**
@@ -426,7 +428,6 @@ export class TenantManager {
    * Set custom tenant resolver
    */
   setResolver(resolver: TenantResolver): void {
-    this.logger.info("Setting custom tenant resolver");
     this.resolver = resolver;
   }
 
@@ -441,8 +442,6 @@ export class TenantManager {
    * Initialize tenant services
    */
   async initializeTenantServices(): Promise<void> {
-    this.logger.info("Initializing tenant services...");
-
     for (const [tenantId, container] of this.containers.entries()) {
       const tenant = this.getTenant(tenantId);
       if (!tenant) continue;
@@ -465,8 +464,6 @@ export class TenantManager {
         );
       }
     }
-
-    this.logger.info("All tenant services initialized");
   }
 
   /**

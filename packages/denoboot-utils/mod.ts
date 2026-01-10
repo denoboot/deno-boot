@@ -3,6 +3,8 @@
  * Utility functions
  */
 
+export * from './figlet/figlet.ts';
+
 /**
  * Load JSON file
  */

@@ -14,15 +14,31 @@ export const AnalyticsPlugin = defineOakPlugin({
   version: "1.0.0",
   description: "Analytics and event tracking",
   type: 'server',
+  
 
   async init(container, config) {
-    const logger = container.resolve<Logger>("logger");
-    logger.info("Initializing analytics plugin");
+    const logger = container.resolve("logger");
+    const events = container.resolve("events");
 
     // Register analytics service
     container.registerSingleton("analytics", async (c) => {
       return new AnalyticsService(c);
     });
+
+     // Listen for tenant initialization
+    events.on("tenant:initialized", async (data: any) => {
+      const { tenant, container: tenantContainer } = data ||{};
+
+      if (tenant && tenant.plugins.includes("analytics")) {
+        logger.debug(`Setting up analytics for tenant: ${tenant.id}`);
+        
+        // Initialize analytics service
+        const analytics = tenantContainer.resolve("analytics") as AnalyticsService;
+        console.log(analytics)
+        await analytics.initialize();
+      }
+    });
+    return await Promise.resolve();
   },
 
   routes: [
@@ -156,9 +172,25 @@ export const AnalyticsPlugin = defineOakPlugin({
 class AnalyticsService {
   private container: Container;
   private events: any[] = [];
+  private initialized = false;
 
   constructor(container: Container) {
     this.container = container;
+  }
+
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+
+    // create table if not exists
+    const db = this.container.resolve<DatabaseDriver>("db");
+
+    console.log("Creating analytics_events table");
+    
+    await db.execute(
+      "CREATE TABLE IF NOT EXISTS analytics_events (id INTEGER PRIMARY KEY, event TEXT, data TEXT, timestamp TEXT)"
+    );
+    this.initialized = true;
   }
 
   async storeEvent(event: any): Promise<void> {

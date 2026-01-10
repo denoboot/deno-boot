@@ -6,31 +6,53 @@
  */
 
 import type {
-  RouterContext,
-  RouterOptions,
   RouteParams,
+  RouterContext,
   RouterMiddleware,
+  RouterOptions,
 } from "@denoboot/x/oak.ts";
 import { Router } from "@denoboot/x/oak.ts";
 import type { Logger } from "@denoboot/logger/mod.ts";
-import type { DenoBootRouteDefinition, DenoBootRouterContract } from "@denoboot/engine/router.ts";
-import { defineMiddlewareFactory } from "@denoboot/engine/middleware.ts";
+import type {
+  DenoBootRouteDefinition,
+  DenoBootRouterContract,
+} from "@denoboot/engine/router.ts";
+import type { EnhancedMiddleware } from "@denoboot/engine/middleware.ts";
 import type { Tenant, TenantManager } from "@denoboot/engine/tenant-manager.ts";
 import type { OakEngineContainer } from "./kernel.ts";
 
-export type OakEngineRouterState<K extends PropertyKey = PropertyKey> =  { tenant: Tenant | null; container: OakEngineContainer } & Record<K, any>;
+export type OakEngineRouterState<K extends PropertyKey = PropertyKey> = {
+  tenant: Tenant | null;
+  container: OakEngineContainer;
+} & Record<K, any>;
 
-export interface OakEngineRouterMiddleware<R extends string = string, P extends RouteParams<R> = RouteParams<R>, S extends OakEngineRouterState = OakEngineRouterState> extends RouterMiddleware<R, P, S> {
+export interface OakEngineRouterMiddleware<
+  R extends string = string,
+  P extends RouteParams<R> = RouteParams<R>,
+  S extends OakEngineRouterState = OakEngineRouterState,
+> extends RouterMiddleware<R, P, S> {
 }
 
-
-
-export class OakRouter<R extends string = string, P extends RouteParams<R> = RouteParams<R>, S extends OakEngineRouterState = OakEngineRouterState> implements DenoBootRouterContract<Router, OakEngineRouterMiddleware<R, P, S>> {
+export class OakRouter<
+  R extends string = string,
+  P extends RouteParams<R> = RouteParams<R>,
+  S extends OakEngineRouterState = OakEngineRouterState,
+> implements
+  DenoBootRouterContract<
+    Router,
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineContainer
+  > {
   router: Router;
   globalContainer: OakEngineContainer;
   tenantManager: TenantManager;
   logger: Logger;
-  routes: DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>>[] = [];
+  routes: DenoBootRouteDefinition<
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineContainer
+  >[] = [];
 
   constructor(
     opts: RouterOptions = {
@@ -42,7 +64,7 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
     },
     globalContainer: OakEngineContainer,
     tenantManager: TenantManager,
-    logger: Logger
+    logger: Logger,
   ) {
     this.router = new Router(opts);
     this.globalContainer = globalContainer;
@@ -59,24 +81,62 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
     //   });
     // });
   }
-
-  /**
-   * Register a route
-   */
-  register(route: DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>, OakEngineRouterMiddleware<R, P, S>, OakEngineContainer>): void {
-    this.routes.push(route);
-
-    const routeName = route.name || `${route.method} ${route.path}`;
-
-    this.logger.debug(`Registering route: ${routeName}`, {
-      tenant: route.tenant || false,
-      path: route.path,
-      containerType: this.globalContainer.constructor.name,
-    });
-
-    const handler = async (ctx: RouterContext<R, P, S>, next: () => Promise<unknown>) => {
+  
+  private handleMiddlewareFactory =
+    (
+      route: DenoBootRouteDefinition<
+        OakEngineRouterMiddleware<R, P, S>,
+        OakEngineRouterMiddleware<R, P, S>,
+        OakEngineContainer
+      >,
+      middleware: EnhancedMiddleware<
+        OakEngineRouterMiddleware<R, P, S>,
+        OakEngineContainer
+      >,
+    ) =>
+    async (ctx: RouterContext<R, P, S>, next: () => Promise<unknown>) => {
       let container = this.globalContainer;
       let tenant: Tenant | null = null;
+
+      const maybeTenantId = async (): Promise<string | undefined> => {
+        if (ctx.params?.tenantId) {
+          this.logger.debug("Tenant ID found in params", {
+            tenantId: ctx.params.tenantId,
+          });
+          return ctx.params.tenantId;
+        }
+        if (ctx.state.tenant?.id) {
+          this.logger.debug("Tenant ID found in state", {
+            tenantId: ctx.state.tenant.id,
+          });
+          return ctx.state.tenant.id;
+        }
+        if (ctx.state?.session?.tenant?.id) {
+          this.logger.debug("Tenant ID found in session", {
+            tenantId: ctx.state.session.tenant.id,
+          });
+          return ctx.state.session.tenant.id;
+        }
+        if (ctx.request.headers.get("x-tenant-id") || ctx.request.headers.get("X-Tenant-Id")) {
+          this.logger.debug("Tenant ID found in headers", {
+            tenantId: ctx.request.headers.get("x-tenant-id") || ctx.request.headers.get("X-Tenant-Id"),
+          });
+          return ctx.request.headers.get("x-tenant-id") || ctx.request.headers.get("X-Tenant-Id") || undefined;
+        }
+        if (await ctx.cookies.get("tenant")) {
+          this.logger.debug("Tenant ID found in cookies", {
+            tenantId: await ctx.cookies.get("tenant"),
+          });
+          return await ctx.cookies.get("tenant");
+        }
+        if (ctx.request.url.hostname.includes(".")) {
+          this.logger.debug("Tenant ID found in hostname", {
+            hostname: ctx.request.url.hostname,
+          });
+          return ctx.request.url.hostname.split(".")[0];
+        }
+        return undefined;
+      };
 
       try {
         // Resolve tenant if route requires it
@@ -86,11 +146,13 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
             path: ctx.request.url.pathname,
           });
 
+          const tenantId = await maybeTenantId();
+
           // Create tenant context from Oak context
           const tenantContext = {
             hostname: ctx.request.url.hostname,
             path: ctx.request.url.pathname,
-            tenantId: ctx.params?.tenantId,
+            tenantId,
             headers: Object.fromEntries(ctx.request.headers.entries()),
           };
 
@@ -114,7 +176,9 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
             tenantName: tenant.name,
           });
 
-          const tenantContainer = this.tenantManager.getContainer(tenant.id);
+          const tenantContainer = this.tenantManager.getContainer<
+            OakEngineContainer
+          >(tenant.id);
           if (tenantContainer) {
             container = tenantContainer;
           } else {
@@ -131,7 +195,7 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
 
           // store tenant in sessions
           if (ctx.state.session) {
-            if ('set' in ctx.state.session) {
+            if ("set" in ctx.state.session) {
               ctx.state.session.set("tenant", tenant);
             } else {
               ctx.state.session.tenant = tenant;
@@ -144,9 +208,7 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
         ctx.state.container = container;
 
         // Execute handler
-        const factory = defineMiddlewareFactory<OakEngineRouterMiddleware<R, P, S>>(route.handler);
-        const middleware = factory({ container, tenant });
-        return middleware(ctx, next);
+        return middleware({ container, tenant })(ctx, next);
       } catch (error) {
         this.logger.error(`Route handler error: ${route.path}`, {
           error: error instanceof Error ? error.message : String(error),
@@ -157,31 +219,59 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
         ctx.response.body = {
           error: "Internal server error",
           message: Deno.env.get("DENO_ENV") === "development"
-              ? error instanceof Error
-                ? error.message
-                : String(error)
-              : undefined,
+            ? error instanceof Error ? error.message : String(error)
+            : undefined,
         };
       }
     };
 
-    // Apply route middleware if any
-    // TODO also apply tenant awareness in the middlewares
-    const middlewares = (route.middleware || []).map((mw) => {
-      const factory = defineMiddlewareFactory(mw);
-      const middleware = factory({ container: this.globalContainer, tenant: null });
-      return middleware;
+  /**
+   * Register a route
+   */
+  register(
+    route: DenoBootRouteDefinition<
+      OakEngineRouterMiddleware<R, P, S>,
+      OakEngineRouterMiddleware<R, P, S>,
+      OakEngineContainer
+    >,
+  ): void {
+    this.routes.push(route);
+
+    const routeName = route.name || `${route.method} ${route.path}`;
+
+    this.logger.debug(`Registering route: ${routeName}`, {
+      tenant: route.tenant || false,
+      path: route.path,
+      containerType: this.globalContainer.constructor.name,
     });
 
-    this.router.add<R, P, S>(route.method, route.path as R, handler, ...middlewares);
+    const middlewares = (route.middleware || []).map((mw) => {
+      return this.handleMiddlewareFactory(route, mw);
+    });
+
+    this.router.add<R, P, S>(
+      route.method,
+      route.path as R,
+      this.handleMiddlewareFactory(route, route.handler),
+      ...middlewares,
+    );
+    if (route.tenant) {
+      this.router.add<R, P, S>(
+        route.method,
+        `/tenant/:tenantId/${route.path}`.replace(/\/+/g, '/') as R,
+        this.handleMiddlewareFactory(route, route.handler),
+        ...middlewares,
+      );
+    }
     this.logger.debug(`Route registered successfully: ${routeName}`);
   }
 
   /**
    * Register multiple routes
    */
-  registerRoutes(routes: DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>>[]): void {
-    this.logger.info(`Registering ${routes.length} routes`);
+  registerRoutes(
+    routes: DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>>[],
+  ): void {
     for (const route of routes) {
       this.register(route);
     }
@@ -197,21 +287,33 @@ export class OakRouter<R extends string = string, P extends RouteParams<R> = Rou
   /**
    * Get all registered routes
    */
-  getRoutes(): DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>>[] {
+  getRoutes(): DenoBootRouteDefinition<
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineContainer
+  >[] {
     return [...this.routes];
   }
 
   /**
    * Get routes by tenant requirement
    */
-  getTenantRoutes(): DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>>[] {
+  getTenantRoutes(): DenoBootRouteDefinition<
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineContainer
+  >[] {
     return this.routes.filter((r) => r.tenant);
   }
 
   /**
    * Get global routes (non-tenant)
    */
-  getGlobalRoutes(): DenoBootRouteDefinition<OakEngineRouterMiddleware<R, P, S>>[] {
+  getGlobalRoutes(): DenoBootRouteDefinition<
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineRouterMiddleware<R, P, S>,
+    OakEngineContainer
+  >[] {
     return this.routes.filter((r) => !r.tenant);
   }
 
