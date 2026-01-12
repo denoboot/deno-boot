@@ -44,7 +44,7 @@ export const SQLitePlugin = defineBootPlugin({
         logger.debug(`Setting up SQLite for tenant: ${tenant.id}`);
         
         try {
-          const driver = await tenantContainer.resolveAsync("db.sqlite") as SQLiteDriver;
+          const driver = tenantContainer.resolve("db.sqlite") as SQLiteDriver;
           await driver.connect();
           
           // Register as 'db' for easy access

@@ -7,85 +7,162 @@
 
 import {
   Application,
-  type RouteParams,
   type ListenOptions,
   type Middleware,
+  type RouteParams,
 } from "@denoboot/x/oak.ts";
 import { type Container, createContainer } from "@denoboot/di/mod.ts";
 
-import { type OakEngineRouterMiddleware, type OakEngineRouterState, OakRouter } from "./router.ts";
+import {
+  type OakEngineRouterMiddleware,
+  type OakEngineRouterState,
+  OakRouter,
+} from "./router.ts";
 import { ConfigLoader } from "@denoboot/config/mod.ts";
 import { createLogger, type Logger } from "@denoboot/logger/mod.ts";
 import { createEventEmitter, type EventEmitter } from "@denoboot/events/mod.ts";
 import type { BootstrapOptions, DenoBootConfig } from "@denoboot/types/mod.ts";
-import { BannerOptions, bootstrapConfigParser, createBanner } from "@denoboot/utils/mod.ts";
+import { bootstrapConfigParser } from "@denoboot/utils/mod.ts";
 import type { DenoBootEngine } from "@denoboot/engine/engine.ts";
-import  { WorkerManager, type WorkerPayload } from "@denoboot/engine/worker-manager.ts";
-import  { type ViewEngine , EtaViewEngine} from "@denoboot/engine/view-engine.ts";
+import {
+  createWorkerManager,
+  WorkerManager,
+  type WorkerPayload,
+} from "@denoboot/engine/worker-manager.ts";
+import {
+  EtaViewEngine,
+  type ViewEngine,
+} from "@denoboot/engine/view-engine.ts";
 import {
   DefaultTenantResolver,
   type Tenant,
   TenantManager,
   type TenantResolver,
 } from "@denoboot/engine/tenant-manager.ts";
-import { type DenoBootEnginePlugin as Plugin, type DenoBootPluginConfig as PluginConfig, PluginManager } from "@denoboot/engine/plugin-manager.ts";
+import {
+  createPluginManager,
+  type DenoBootEnginePlugin,
+  type DenoBootPluginConfig,
+  PluginManager,
+} from "@denoboot/engine/plugin-manager.ts";
+import { requestLogMiddleware } from "./middleware/request-log.ts";
+import {
+  errorHandleMiddleware,
+  renderErrorPage,
+} from "./middleware/error-handle.ts";
 
-export interface OakEngineAppMiddleware<S extends Record<PropertyKey, any> = Record<string, any>> extends Middleware<S> {}
+export interface OakEngineAppMiddleware<
+  S extends Record<PropertyKey, any> = Record<string, any>,
+> extends Middleware<S> {}
 
+export type OakEngineInternalServices<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  config: DenoBootConfig;
+  logger: Logger;
+  events: EventEmitter;
+  plugins: PluginManager;
+  tenantManager: TenantManager;
+  pluginManager: PluginManager;
+  workers: WorkerManager;
+  views: ViewEngine;
+  router: OakRouter;
+} & T;
 
-export type OakEngineInternalServices<T extends Record<string, unknown> = Record<string, unknown>> = {
-    config: DenoBootConfig;
-    logger: Logger;
-    events: EventEmitter;
-    plugins: PluginManager;
-    tenantManager: TenantManager;
-    pluginManager: PluginManager;
-    workers: WorkerManager;
-    views: ViewEngine;
-    router: OakRouter;
-  } & T;
-
-export interface OakEngineContainer<T extends Record<string, unknown> = Record<string, unknown>> extends Container<OakEngineInternalServices<T>> {
+export interface OakEngineContainer<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> extends Container<OakEngineInternalServices<T>> {
   // Add any Oak-specific container properties here if needed
 }
 
-
-export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>> implements DenoBootEngine {
+export class OakKernel<
+  AS extends Record<PropertyKey, any> = Record<string, any>,
+> implements DenoBootEngine {
   name = "oak-engine";
 
+  /**
+   * Oak Application instance
+   */
   private app: Application<AS>;
+
+  /**
+   * Oak Engine Container
+   */
   private container: OakEngineContainer;
+
+  /**
+   * Logger instance
+   */
   private logger: Logger;
+
+  /**
+   * Plugin Manager
+   */
   private pluginManager: PluginManager;
+
+  /**
+   * Tenant Manager
+   */
   private tenantManager: TenantManager;
+
+  /**
+   * Worker Manager
+   */
   private workerManager: WorkerManager;
+
+  /**
+   * View Engine
+   */
   private viewEngine: ViewEngine;
+
+  /**
+   * Oak Router
+   */
   private router: OakRouter<any, any, any>;
+
+  /**
+   * Configuration
+   */
   private config: DenoBootConfig;
+
+  /**
+   * Middlewares
+   */
   private middlewares: OakEngineAppMiddleware<AS>[] = [];
+
+  /**
+   * Initialized flag
+   */
   private initialized = false;
+
+  /**
+   * Booted flag
+   */
   private booted = false;
+
+  /**
+   * Event Emitter
+   */
   private eventEmitter: EventEmitter;
 
   constructor(config: DenoBootConfig) {
     this.config = config;
     this.app = new Application<AS>();
-    this.container = createContainer();
+    this.container = createContainer<OakEngineInternalServices>();
     this.logger = createLogger(config.logger);
-    this.pluginManager = new PluginManager(this.logger);
-    this.workerManager = new WorkerManager(this.logger);
+    this.pluginManager = createPluginManager(this.logger);
+    this.workerManager = createWorkerManager(this.logger);
     this.viewEngine = new EtaViewEngine(this.logger, config.viewPaths || []);
     this.eventEmitter = createEventEmitter();
 
-    
     // Register core services
-    this.registerCoreServices();
+    this.registerPreTenantCoreServices();
 
     // Initialize tenant manager
     this.tenantManager = new TenantManager(
       this.container,
       this.logger,
-      new DefaultTenantResolver()
+      new DefaultTenantResolver(),
     );
 
     // Initialize router
@@ -93,28 +170,29 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
       undefined, // TODO: Original Oak Router options
       this.container,
       this.tenantManager,
-      this.logger
+      this.logger,
     );
 
+    // Register post-tenant core services
+    this.registerPostTenantCoreServices();
   }
 
   /**
    * Register core services in the container
    */
-  private registerCoreServices(): void {
+  private registerPreTenantCoreServices(): void {
     this.container.register("config", this.config);
     this.container.register("logger", this.logger);
     this.container.register("events", this.eventEmitter);
     this.container.register("plugins", this.pluginManager);
-    this.container.register("tenantManager", this.tenantManager);
     this.container.register("pluginManager", this.pluginManager);
     this.container.register("workers", this.workerManager);
     this.container.register("views", this.viewEngine);
-    this.container.register("router", this.router);
   }
 
-  createBanner(name: string, options?: BannerOptions) {
-    console.log(createBanner(name, options));
+  private registerPostTenantCoreServices(): void {
+    this.container.register("tenantManager", this.tenantManager);
+    this.container.register("router", this.router);
   }
 
   setContainer(container: OakEngineContainer): void {
@@ -125,8 +203,11 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
    * Register a plugin
    */
   async registerPlugin(
-    plugin: Plugin<OakEngineAppMiddleware<AS>, OakEngineRouterMiddleware>,
-    config: PluginConfig = {}
+    plugin: DenoBootEnginePlugin<
+      OakEngineAppMiddleware<AS>,
+      OakEngineRouterMiddleware
+    >,
+    config: DenoBootPluginConfig = {},
   ): Promise<void> {
     await this.pluginManager.register(plugin, config);
   }
@@ -136,7 +217,7 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
    */
   async registerPluginFromPath(
     path: string,
-    config: PluginConfig = {}
+    config: DenoBootPluginConfig = {},
   ): Promise<void> {
     await this.pluginManager.registerFromPath(path, config);
   }
@@ -257,36 +338,10 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
    */
   private setupApplication(): void {
     // Error handling
-    this.app.use(async (ctx, next) => {
-      try {
-        await next();
-      } catch (error: any) {
-        this.logger.error("Request error", {
-          error: error.message,
-          stack: error.stack,
-          url: ctx.request.url.toString(),
-        });
-
-        ctx.response.status = error.status || 500;
-        ctx.response.body = {
-          error: error.message,
-          status: error.status || 500,
-        };
-      }
-    });
+    this.app.use(errorHandleMiddleware(this.container));
 
     // Request logging
-    this.app.use(async (ctx, next) => {
-      const start = Date.now();
-      await next();
-      const ms = Date.now() - start;
-
-      const logLevel = ctx.response.status >= 500 ? "error" : ctx.response.status >= 400 ? "warn" : "info";
-
-      this.logger[logLevel](
-        `${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} (${ms}ms)`,
-      );
-    });
+    this.app.use(requestLogMiddleware(this.container));
 
     // Apply custom middleware
     for (const middleware of this.middlewares) {
@@ -306,19 +361,15 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     this.app.use(this.router.getRouter().routes());
     this.app.use(this.router.getRouter().allowedMethods());
 
-    // 404 handler
-    this.app.use((ctx) => {
-      ctx.response.status = 404;
-      ctx.response.body = { error: "Not found" };
-    });
+    this.app.use(renderErrorPage(this.container));
   }
 
-  async bootLogDiagnostics(enabled = false) {
+  async bootLogDiagnostics(enabled = true) {
     if (!enabled) return;
-    
+
     // Print diagnostic information
     console.log("\n" + "═".repeat(70));
-    console.log("🎉 DenoBoot Engine Ready");
+    console.log("🦕 DenoBoot OakEngine Ready");
     console.log("═".repeat(70));
 
     const config = this.getConfig();
@@ -343,13 +394,13 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     console.log(`   Main: http://${config.hostname}:${config.port}`);
     console.log(`   Health: http://${config.hostname}:${config.port}/health`);
     console.log(
-      `   Tenants: http://${config.hostname}:${config.port}/api/tenants`
+      `   Tenants: http://${config.hostname}:${config.port}/api/tenants`,
     );
 
     console.log("\n🏢 Tenant Dashboards (Path-Based):");
     tenants.forEach((t) => {
       console.log(
-        `   ${t.name}: http://${config.hostname}:${config.port}/tenant/${t.id}/dashboard`
+        `   ${t.name}: http://${config.hostname}:${config.port}/tenant/${t.id}/dashboard`,
       );
     });
 
@@ -359,7 +410,7 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
         .filter((t) => t.subdomain)
         .forEach((t) => {
           console.log(
-            `   ${t.name}: http://${t.subdomain}.${config.hostname}:${config.port}/dashboard`
+            `   ${t.name}: http://${t.subdomain}.${config.hostname}:${config.port}/dashboard`,
           );
         });
       console.log("\n   ⚠️  For subdomain routing, add to /etc/hosts:");
@@ -385,7 +436,7 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     if (tenants.length > 0) {
       const firstTenant = tenants[0];
       console.log(
-        `   curl http://${config.hostname}:${config.port}/tenant/${firstTenant.id}/dashboard`
+        `   curl http://${config.hostname}:${config.port}/tenant/${firstTenant.id}/dashboard`,
       );
     }
 
@@ -428,10 +479,13 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
     Deno.exit(0);
   }
 
-  getRouter<R extends string = string, P extends RouteParams<R> = RouteParams<R>, S extends OakEngineRouterState = OakEngineRouterState>(): OakRouter<R, P, S> {
+  getRouter<
+    R extends string = string,
+    P extends RouteParams<R> = RouteParams<R>,
+    S extends OakEngineRouterState = OakEngineRouterState,
+  >(): OakRouter<R, P, S> {
     return this.router;
   }
-
 
   /**
    * Get container
@@ -453,13 +507,13 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
   async dispatchWorker(
     plugin: string,
     worker: string,
-    payload: WorkerPayload
+    payload: WorkerPayload,
   ): Promise<string> {
     return await this.workerManager.dispatch(
       plugin,
       worker,
       payload,
-      this.container
+      this.container,
     );
   }
 
@@ -468,7 +522,7 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
    */
   async renderView(
     view: string,
-    data: Record<string, unknown> = {}
+    data: Record<string, unknown> = {},
   ): Promise<string> {
     return await this.viewEngine.render(view, data);
   }
@@ -499,13 +553,15 @@ export class OakKernel<AS extends Record<PropertyKey, any> = Record<string, any>
  * @default options = 'boot.config.ts'
  * @returns {Promise<DenoBootKernel>}
  */
-export async function oakEngine<AS extends Record<PropertyKey, any> = Record<string, any>>(
+export async function oakEngine<
+  AS extends Record<PropertyKey, any> = Record<string, any>,
+>(
   /**
    * Configuration options or path to config file
    *
    * @default 'boot.config.ts'
    */
-  options: BootstrapOptions | string = "boot.config.ts"
+  options: BootstrapOptions | string = "boot.config.ts",
 ): Promise<OakKernel<AS>> {
   const cfg = await bootstrapConfigParser(options);
 
@@ -514,7 +570,7 @@ export async function oakEngine<AS extends Record<PropertyKey, any> = Record<str
 
   // Create kernel
   const kernel = new OakKernel<AS>(cfg.config);
-  
+
   // Use custom container if provided
   if (cfg.container) {
     // Transfer services to custom container
@@ -551,8 +607,29 @@ export async function oakEngine<AS extends Record<PropertyKey, any> = Record<str
       kernel.use(middleware);
     }
   }
-
-  
+  kernel.use((_ctx, next) => {
+    if (kernel.getRouter().getRoutes().filter((r) => r.path === "/").length <= 0) {
+      kernel.getRouter().register({
+        method: "GET",
+        path: "/",
+        tenant: false,
+        name: "core/root",
+        handler: (kwargs) => {
+          return async (ctx, _next) => {
+            const views = kwargs.container.resolve("views");
+            const html = await views.render("core/root", {
+              // app: ctx.app,
+              // env: ctx.env,
+              version: "0.1.0",
+            });
+            ctx.response.type = "text/html";
+            ctx.response.body = html;
+          };
+        },
+      });
+    }
+    return next();
+  })
 
   // Initialize and boot
   await kernel.initialize();

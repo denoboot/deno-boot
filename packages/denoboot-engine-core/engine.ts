@@ -38,3 +38,15 @@ export interface DenoBootEngine {
    */
   shutdown?(): Promise<void>;
 }
+
+export abstract class DenoBootEngineImpl implements DenoBootEngine {
+  protected initialized = false;
+  protected booted = false;
+  
+  abstract readonly name: string;
+  
+  abstract initialize(): Promise<void>;
+  abstract boot(): Promise<void>;
+  abstract listen?(): Promise<void>;
+  abstract shutdown?(): Promise<void>;
+}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 – Page Not Found</title>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --border: #e5e7eb;
+    }
+
+    [data-theme="dark"] {
+      --bg: #020617;
+      --fg: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+      --border: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    main {
+      text-align: center;
+      max-width: 520px;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 4rem;
+      letter-spacing: -0.05em;
+    }
+
+    h2 {
+      margin-top: 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    p {
+      margin-top: 1rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .home-link {
+      display: inline-block;
+      margin-top: 2rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Debug section */
+    .debug {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: left;
+    }
+
+    ul {
+      margin-top: 0.75rem;
+      list-style: none;
+    }
+
+    li {
+      padding: 0.35rem 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>404</h1>
+    <p>The page you’re looking for doesn’t exist or has been moved.</p>
+
+    <a class="home-link" href="/">← Back to home</a>
+
+    <% if (it?.debug) { %>
+      <section class="debug">
+        <h2>Available Routes</h2>
+        <small>You are seeing this because <strong>debug</strong> mode is enabled</small>
+
+        <% if ((it?.routes?.length ?? 0) > 0) { %>
+          <ul>
+            <% for (const route of it.routes) { %>
+              <li>
+                <span style="color: var(--fg); font-weight: <%= route?.name ? 'bold' : 'normal' %>"><%= route?.name ?? 'Unnamed' %>:</span> 
+                <a href="<%= route.path %>"><%= route.path %></a>
+              </li>
+            <% } %>
+          </ul>
+        <% } else { %>
+          <p>No routes registered.</p>
+        <% } %>
+      </section>
+    <% } %>
+
+    <footer>
+      Request ID: <%= it?.requestId ?? "n/a" %>
+    </footer>
+  </main>
+
+  <script type="module">
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+
+    document.documentElement.setAttribute("data-theme", systemTheme);
+  </script>
+</body>
+</html>

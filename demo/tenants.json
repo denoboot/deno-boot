@@ -1,23 +1,60 @@
 {
-  "datasource": {
-    "type": "database",
-    "name": "mydb",
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "password"
-  },
   "tenants": [
     {
-      "id": "tenant1",
-      "name": "Tenant One",
-      "subdomain": "tenant1",
-      "plugins": ["oak-dashboard", "oak-fs-router", "sqlite", "denokv", "blog", "analytics"],
+      "id": "default",
+      "identifier": "default",
+      "name": "Default",
+      "subdomain": "default",
+      "plugins": [
+        "oak-dashboard",
+        "oak-fs-router",
+        "sqlite",
+        "denokv",
+        "blog",
+        "analytics"
+      ],
       "enabled": true,
       "config": {
         "database": {
           "type": "sqlite",
-          "connection": "./data/tenant1.db"
+          "connection": "./data/default.db",
+          "default": {
+            "type": "sqlite",
+            "connection": "./data/default.db"
+          },
+          "analytics": {
+            "type": "sqlite",
+            "connection": "./data/default_analytics.db"
+          }
+        }
+      }
+    },
+    {
+      "id": "tenant1",
+      "identifier": "tenant1",
+      "name": "Tenant One",
+      "subdomain": "tenant1",
+      "plugins": [
+        "oak-dashboard",
+        "oak-fs-router",
+        "sqlite",
+        "denokv",
+        "blog",
+        "analytics"
+      ],
+      "enabled": true,
+      "config": {
+        "database": {
+          "type": "sqlite",
+          "connection": "./data/tenant1.db",        
+          "default": {
+            "type": "sqlite",
+            "connection": "./data/tenant1.db"
+          },
+          "analytics": {
+            "type": "sqlite",
+            "connection": "./data/tenant1_analytics.db"
+          }
         }
       }
     }

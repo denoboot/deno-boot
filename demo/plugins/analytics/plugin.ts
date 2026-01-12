@@ -4,10 +4,10 @@
  * Provides event tracking and analytics
  */
 
-import { Container } from "@denoboot/di/mod.ts";
-import { Logger } from "@denoboot/logger";
-import { CacheDriver, DatabaseDriver } from "@denoboot/types";
-import { defineOakPlugin } from "@denoboot/oak/mod.ts";
+import { Logger } from "@denoboot/logger/mod.ts";
+import { CacheDriver, DatabaseDriver } from "@denoboot/types/mod.ts";
+import { defineOakPlugin, OakEngineContainer } from "@denoboot/oak/mod.ts";
+import { Tenant } from "@denoboot/engine";
 
 export const AnalyticsPlugin = defineOakPlugin({
   name: "analytics",
@@ -26,15 +26,14 @@ export const AnalyticsPlugin = defineOakPlugin({
     });
 
      // Listen for tenant initialization
-    events.on("tenant:initialized", async (data: any) => {
-      const { tenant, container: tenantContainer } = data ||{};
+    events.on<{ tenant: Tenant; container: OakEngineContainer<{ analytics: AnalyticsService }> }>("tenant:initialized", async (data) => {
+      const { tenant, container: tenantContainer } = data || {};
 
-      if (tenant && tenant.plugins.includes("analytics")) {
+      if (tenantContainer && tenant && tenant.plugins.includes("analytics")) {
         logger.debug(`Setting up analytics for tenant: ${tenant.id}`);
         
         // Initialize analytics service
-        const analytics = tenantContainer.resolve("analytics") as AnalyticsService;
-        console.log(analytics)
+        const analytics = await tenantContainer.resolveAsync("analytics");
         await analytics.initialize();
       }
     });
@@ -108,7 +107,7 @@ export const AnalyticsPlugin = defineOakPlugin({
     {
       name: "track-event",
       handler: async (payload, container) => {
-        const logger = container.resolve<Logger>("logger");
+        const logger = container.resolve("logger");
         const analytics = await container.resolveAsync<AnalyticsService>("analytics");
 
         logger.debug("Tracking analytics event", {
@@ -127,7 +126,7 @@ export const AnalyticsPlugin = defineOakPlugin({
     {
       name: "aggregate-stats",
       handler: async (payload, container) => {
-        const logger = container.resolve<Logger>("logger");
+        const logger = container.resolve("logger");
         const analytics = await container.resolveAsync<AnalyticsService>("analytics");
 
         logger.debug("Aggregating analytics stats");
@@ -170,26 +169,25 @@ export const AnalyticsPlugin = defineOakPlugin({
 });
 
 class AnalyticsService {
-  private container: Container;
+  private container: OakEngineContainer;
   private events: any[] = [];
   private initialized = false;
 
-  constructor(container: Container) {
+  constructor(container: OakEngineContainer) {
     this.container = container;
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    if (this.container.has("db")) {
+      // create table if not exists
+      const db = this.container.resolve<DatabaseDriver>("db");
 
-    // create table if not exists
-    const db = this.container.resolve<DatabaseDriver>("db");
-
-    console.log("Creating analytics_events table");
-    
-    await db.execute(
-      "CREATE TABLE IF NOT EXISTS analytics_events (id INTEGER PRIMARY KEY, event TEXT, data TEXT, timestamp TEXT)"
-    );
+      await db.execute(
+        "CREATE TABLE IF NOT EXISTS analytics_events (id INTEGER PRIMARY KEY, event TEXT, data TEXT, timestamp TEXT)"
+      );
+    }
     this.initialized = true;
   }
 
@@ -202,7 +200,7 @@ class AnalyticsService {
     }
 
     // Store in database
-    const db = this.container.resolve<DatabaseDriver>("db.sqlite");
+    const db = this.container.resolve<DatabaseDriver>("db");
 
     try {
       await db.execute(
@@ -219,7 +217,7 @@ class AnalyticsService {
   }
 
   async getEvents(limit = 100): Promise<any[]> {
-    const db = this.container.resolve<DatabaseDriver>("db.sqlite");
+    const db = this.container.resolve<DatabaseDriver>("db");
 
     try {
       return await db.query(

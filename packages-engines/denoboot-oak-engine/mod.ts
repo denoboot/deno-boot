@@ -29,7 +29,7 @@ export function defineOakPluginRoute<T extends Record<string, unknown> = Record<
     return $;
 }
 
-export function defineOakPluginWorker($: DenoBootWorkerDefinition) {
+export function defineOakPluginWorker($: DenoBootWorkerDefinition<OakEngineContainer>) {
     return $;
 }
 

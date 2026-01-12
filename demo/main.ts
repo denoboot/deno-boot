@@ -9,23 +9,24 @@ const boot = await oakEngine();
 
 const router = boot.getRouter();
 
-router.register({
-  method: "GET",
-  path: "/",
-  tenant: false,
-  name: "home",
-  handler: (kwargs) => {
-    return async (ctx, _next) => {
-    const views = kwargs.container.resolve("views");
-    const html = await views.render("home", {
-      title: "Deno Boot Engine",
-      description: "Multi-tenant plugin framework for Deno",
-    });
-    ctx.response.type = "text/html";
-    ctx.response.body = html;
-    }
-  },
-});
+// router.register({
+//   method: "GET",
+//   path: "/",
+//   tenant: false,
+//   name: "home",
+//   handler: (kwargs) => {
+//     return async (ctx, _next) => {
+//     const views = kwargs.container.resolve("views");
+//     views.addPath(new URL("./views", import.meta.url).pathname);
+//     const html = await views.render("home", {
+//       title: "Deno Boot Engine",
+//       description: "Multi-tenant plugin framework for Deno",
+//     });
+//     ctx.response.type = "text/html";
+//     ctx.response.body = html;
+//     }
+//   },
+// });
 
 router.register({
   method: "GET",

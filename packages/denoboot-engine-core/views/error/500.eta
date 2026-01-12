@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= it.status ?? 500 %> – Server Error</title>
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #0f172a;
+      --muted: #64748b;
+      --danger: #dc2626;
+    }
+
+    [data-theme="dark"] {
+      --bg: #020617;
+      --fg: #e5e7eb;
+      --muted: #94a3b8;
+      --danger: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    main {
+      text-align: center;
+      max-width: 520px;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 3rem;
+      color: var(--danger);
+      letter-spacing: -0.03em;
+    }
+
+    p {
+      margin-top: 1rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    code {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.4rem 0.6rem;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1><%= it.status ?? 500 %> – Server Error</h1>
+
+    <p>
+      Something went wrong on our side.
+      The system has logged this incident.
+    </p>
+
+    <code>
+      Error ID: <%= it?.errorId ?? "unknown" %>
+    </code>
+
+    <footer>
+      Please try again later.
+    </footer>
+  </main>
+
+  <script type="module">
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+
+    document.documentElement.setAttribute("data-theme", systemTheme);
+  </script>
+</body>
+</html>

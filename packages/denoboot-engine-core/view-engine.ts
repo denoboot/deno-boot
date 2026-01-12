@@ -40,7 +40,7 @@ export class EtaViewEngine implements ViewEngine {
     this.viewPaths = viewPaths;
     
     this.eta = new Eta({
-      views: "./views",
+      views: new URL("./views", import.meta.url).pathname,
       cache: Deno.env.get("DENO_ENV") === "production",
       autoEscape: true,
     });
@@ -163,12 +163,15 @@ export class EtaViewEngine implements ViewEngine {
 
     // 4. Plugin views
     if (options.plugin) {
-      searchPaths.push(`./engine/plugins/${options.plugin}/views/${viewFile}`);
       searchPaths.push(`./plugins/${options.plugin}/views/${viewFile}`);
     }
 
-    // 5. Core views
-    searchPaths.push(`./engine/views/${viewFile}`);
+    // 5. App views
+    searchPaths.push(`./views/${viewFile}`);
+
+    // 6. Core views (using import.meta.url for better compatibility)
+    searchPaths.push(new URL(`./views/${viewFile}`, import.meta.url).pathname);
+
 
     // Search for the view
     for (const path of searchPaths) {
@@ -176,6 +179,7 @@ export class EtaViewEngine implements ViewEngine {
         return path;
       }
     }
+
 
     return null;
   }

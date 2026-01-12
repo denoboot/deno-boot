@@ -12,33 +12,41 @@ import type { DenoBootWorkerDefinition } from "./worker-manager.ts";
 import type { AnyMiddleware } from "./middleware.ts";
 import { fileExists } from "@denoboot/utils/mod.ts";
 
-
 /**
  * Plugin type
  * client: Client-side plugin
  * server: Server-side plugin
  * client-server: Both client and server-side plugin
  */
-export type DenoBootPluginType = 'client' | 'server' | 'client-server';
+export type DenoBootPluginType = "client" | "server" | "client-server";
 
 /**
  * Plugin interface - all plugins must implement this
  */
-export interface DenoBootEnginePlugin<TAppMiddleware extends AnyMiddleware = AnyMiddleware, TRouteMiddleware extends AnyMiddleware = AnyMiddleware, TRouteHandler extends TRouteMiddleware = TRouteMiddleware, TContainer extends Container = Container> {
+export interface DenoBootEnginePlugin<
+  TAppMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteHandler extends TRouteMiddleware = TRouteMiddleware,
+  TContainer extends Container = Container,
+> {
   name: string;
   version: string;
   type: DenoBootPluginType;
   description?: string;
   dependencies?: string[];
-  
+
   // Lifecycle hooks
   init?(container: TContainer, config: DenoBootPluginConfig): Promise<void>;
   boot?(container: TContainer): Promise<void>;
   shutdown?(container: TContainer): Promise<void>;
-  
+
   // Optional features
-  routes?: DenoBootRouteDefinition<TRouteMiddleware, TRouteHandler, TContainer>[];
-  workers?: DenoBootWorkerDefinition[];
+  routes?: DenoBootRouteDefinition<
+    TRouteMiddleware,
+    TRouteHandler,
+    TContainer
+  >[];
+  workers?: DenoBootWorkerDefinition<TContainer>[];
   middleware?: TAppMiddleware[];
   viewPaths?: string[];
   assetPaths?: string[];
@@ -48,7 +56,7 @@ export interface DenoBootEnginePlugin<TAppMiddleware extends AnyMiddleware = Any
     view: string[];
     assets: string[];
     [key: string]: string[];
-  }
+  };
 }
 
 /**
@@ -58,15 +66,33 @@ export interface DenoBootPluginConfig {
   [key: string]: unknown;
 }
 
-interface LoadedPlugin<TAppMiddleware extends AnyMiddleware = AnyMiddleware, TRouteMiddleware extends AnyMiddleware = AnyMiddleware, TRouteHandler extends TRouteMiddleware = TRouteMiddleware, TContainer extends Container = Container> {
-  plugin: DenoBootEnginePlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer>;
+interface LoadedPlugin<
+  TAppMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteHandler extends TRouteMiddleware = TRouteMiddleware,
+  TContainer extends Container = Container,
+> {
+  plugin: DenoBootEnginePlugin<
+    TAppMiddleware,
+    TRouteMiddleware,
+    TRouteHandler,
+    TContainer
+  >;
   config: DenoBootPluginConfig;
   initialized: boolean;
   booted: boolean;
 }
 
-export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware, TRouteMiddleware extends AnyMiddleware = AnyMiddleware, TRouteHandler extends TRouteMiddleware = TRouteMiddleware, TContainer extends Container = Container> {
-  private plugins = new Map<string, LoadedPlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer>>();
+export class PluginManager<
+  TAppMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteHandler extends TRouteMiddleware = TRouteMiddleware,
+  TContainer extends Container = Container,
+> {
+  private plugins = new Map<
+    string,
+    LoadedPlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer>
+  >();
   private logger: Logger;
 
   constructor(logger: Logger) {
@@ -77,8 +103,13 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
    * Register a plugin
    */
   async register(
-    plugin: DenoBootEnginePlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer>,
-    config: DenoBootPluginConfig = {}
+    plugin: DenoBootEnginePlugin<
+      TAppMiddleware,
+      TRouteMiddleware,
+      TRouteHandler,
+      TContainer
+    >,
+    config: DenoBootPluginConfig = {},
   ): Promise<void> {
     if (this.plugins.has(plugin.name)) {
       throw new Error(`Plugin '${plugin.name}' is already registered`);
@@ -91,7 +122,7 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
       for (const dep of plugin.dependencies) {
         if (!this.plugins.has(dep)) {
           throw new Error(
-            `Plugin '${plugin.name}' depends on '${dep}' which is not registered`
+            `Plugin '${plugin.name}' depends on '${dep}' which is not registered`,
           );
         }
       }
@@ -104,7 +135,7 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
       booted: false,
     });
 
-    this.logger.info(`Plugin registered: ${plugin.name} v${plugin.version}`);
+    this.logger.debug(`Plugin registered: ${plugin.name} v${plugin.version}`);
   }
 
   /**
@@ -112,18 +143,21 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
    */
   async registerFromPath(
     path: string,
-    config: DenoBootPluginConfig = {}
+    config: DenoBootPluginConfig = {},
   ): Promise<void> {
-    const pluginPath = path.endsWith("/plugin.ts")
-      ? path
-      : `${path}/plugin.ts`;
+    const pluginPath = path.endsWith("/plugin.ts") ? path : `${path}/plugin.ts`;
 
     if (!(await fileExists(pluginPath))) {
       throw new Error(`Plugin file not found: ${pluginPath}`);
     }
 
     const module = await import(pluginPath);
-    const plugin: DenoBootEnginePlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer> = module.default || module.plugin;
+    const plugin: DenoBootEnginePlugin<
+      TAppMiddleware,
+      TRouteMiddleware,
+      TRouteHandler,
+      TContainer
+    > = module.default || module.plugin;
 
     if (!plugin) {
       throw new Error(`No plugin export found in ${pluginPath}`);
@@ -141,7 +175,7 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
 
     for (const name of sorted) {
       const loaded = this.plugins.get(name)!;
-      
+
       if (loaded.initialized) continue;
 
       this.logger.debug(`Initializing plugin: ${name}`);
@@ -163,7 +197,7 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
 
     for (const name of sorted) {
       const loaded = this.plugins.get(name)!;
-      
+
       if (!loaded.initialized) {
         throw new Error(`Plugin '${name}' must be initialized before booting`);
       }
@@ -208,7 +242,16 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
   /**
    * Get a plugin by name
    */
-  get(name: string): DenoBootEnginePlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer> | null {
+  get(
+    name: string,
+  ):
+    | DenoBootEnginePlugin<
+      TAppMiddleware,
+      TRouteMiddleware,
+      TRouteHandler,
+      TContainer
+    >
+    | null {
     const loaded = this.plugins.get(name);
     return loaded ? loaded.plugin : null;
   }
@@ -238,7 +281,12 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
   /**
    * Get all plugins
    */
-  getAll(): DenoBootEnginePlugin<TAppMiddleware, TRouteMiddleware, TRouteHandler, TContainer>[] {
+  getAll(): DenoBootEnginePlugin<
+    TAppMiddleware,
+    TRouteMiddleware,
+    TRouteHandler,
+    TContainer
+  >[] {
     return Array.from(this.plugins.values()).map((l) => l.plugin);
   }
 
@@ -276,4 +324,18 @@ export class PluginManager<TAppMiddleware extends AnyMiddleware = AnyMiddleware,
 
     return sorted;
   }
+}
+
+export function createPluginManager<
+  TAppMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouteHandler extends TRouteMiddleware = TRouteMiddleware,
+  TContainer extends Container = Container,
+>(logger: Logger) {
+  return new PluginManager<
+    TAppMiddleware,
+    TRouteMiddleware,
+    TRouteHandler,
+    TContainer
+  >(logger);
 }

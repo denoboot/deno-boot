@@ -1,0 +1,19 @@
+<header>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Deno_Logo_2024.svg/1200px-Deno_Logo_2024.svg.png" alt="Deno Boot Logo" style="width: 100px; height: 100px;">
+  <h1>Deno Boot</h1>
+  <p>
+    Your application is running successfully.
+  </p>
+</header>
+
+<div class="card">
+  <p>
+    This is the default root template.
+  </p>
+
+  <ul>
+    <li>Create <code>views/root.eta</code> to override this page</li>
+    <li>Or override individual blocks in <code>views/blocks/</code></li>
+    <li>Eta templates with predictable resolution order</li>
+  </ul>
+</div>

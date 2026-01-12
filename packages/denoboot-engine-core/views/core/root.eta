@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="<%= it.lang ?? 'en' %>" data-theme="<%= it.theme ?? 'light' %>">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>
+    <%~ include('core/blocks/title', it) %>
+  </title>
+
+  <%~ include('core/blocks/head', it) %>
+
+  <style>
+    :root {
+      --bg: var(--color-bg);
+      --fg: var(--color-fg);
+      --muted: var(--color-muted);
+      --accent: var(--color-accent);
+      --card: var(--color-card);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --fg: #020617;
+      --muted: #475569;
+      --accent: #0ea5e9;
+      --card: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --fg: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --card: #020617;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+    }
+
+    header {
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      margin-top: 2rem;
+    }
+
+    footer {
+      margin-top: 4rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <%~ include('core/blocks/content', it) %>
+
+    <footer>
+      <p>
+        Powered by <strong>Deno Boot</strong> · Eta Templates
+      </p>
+    </footer>
+
+  </div>
+  <script type="module">
+    // system theme or light
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', systemTheme);
+  </script>
+</body>
+</html>

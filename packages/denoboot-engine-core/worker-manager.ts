@@ -12,18 +12,18 @@ import type { EventEmitter } from "@denoboot/events/mod.ts";
  * Worker definition
  */
 
-export interface DenoBootWorkerDefinition {
+export interface DenoBootWorkerDefinition<TContainer extends Container = Container> {
   name: string;
-  handler: WorkerHandler;
+  handler: WorkerHandler<TContainer>;
   schedule?: string; // Cron expression for scheduled workers
   timeout?: number; // Timeout in milliseconds
   retries?: number; // Number of retries on failure
   concurrency?: number; // Max concurrent executions
 }
 
-export type WorkerHandler = (
+export type WorkerHandler<TContainer extends Container = Container> = (
   payload: WorkerPayload,
-  container: Container
+  container: TContainer
 ) => Promise<WorkerResult>;
 
 export interface WorkerPayload {
@@ -38,9 +38,9 @@ export interface WorkerResult {
   error?: string;
 }
 
-interface RegisteredWorker {
+interface RegisteredWorker<TContainer extends Container = Container> {
   plugin: string;
-  definition: DenoBootWorkerDefinition;
+  definition: DenoBootWorkerDefinition<TContainer>;
   runCount: number;
   lastRun?: Date;
   runningInstances: number;
@@ -79,8 +79,8 @@ export interface WorkerStats {
   total: number;
 }
 
-export class WorkerManager {
-  private workers = new Map<string, RegisteredWorker>();
+export class WorkerManager<TContainer extends Container = Container> {
+  private workers = new Map<string, RegisteredWorker<TContainer>>();
   private jobs = new Map<string, WorkerJob>();
   private queue: WorkerJob[] = [];
   private logger: Logger;
@@ -106,7 +106,7 @@ export class WorkerManager {
    */
   register(
     plugin: string,
-    definition: DenoBootWorkerDefinition
+    definition: DenoBootWorkerDefinition<TContainer>
   ): void {
     const key = `${plugin}.${definition.name}`;
     
@@ -135,7 +135,7 @@ export class WorkerManager {
   /**
    * Register multiple workers from a plugin
    */
-  registerWorkers(plugin: string, workers: DenoBootWorkerDefinition[]): void {
+  registerWorkers(plugin: string, workers: DenoBootWorkerDefinition<TContainer>[]): void {
     for (const worker of workers) {
       this.register(plugin, worker);
     }
@@ -148,7 +148,7 @@ export class WorkerManager {
     plugin: string,
     workerName: string,
     payload: WorkerPayload,
-    container: Container
+    container: TContainer
   ): Promise<string> {
     const key = `${plugin}.${workerName}`;
     const worker = this.workers.get(key);
@@ -282,7 +282,7 @@ export class WorkerManager {
   /**
    * Retry a failed job
    */
-  async retry(jobId: string, container: Container): Promise<string> {
+  async retry(jobId: string, container: TContainer): Promise<string> {
     const job = this.jobs.get(jobId);
     if (!job || job.status !== "failed") {
       throw new Error(`Cannot retry job ${jobId}`);
@@ -300,7 +300,7 @@ export class WorkerManager {
   /**
    * Process the job queue
    */
-  private async processQueue(container: Container): Promise<void> {
+  private async processQueue(container: TContainer): Promise<void> {
     this.running = true;
 
     while (
@@ -338,7 +338,7 @@ export class WorkerManager {
    */
   private async executeJob(
     job: WorkerJob,
-    container: Container
+    container: TContainer
   ): Promise<void> {
     const key = `${job.plugin}.${job.worker}`;
     const worker = this.workers.get(key);
@@ -620,4 +620,8 @@ export class WorkerManager {
     this.queue = [];
     this.logger.info("Worker manager shut down");
   }
+}
+
+export function createWorkerManager<TContainer extends Container = Container>(logger: Logger) {
+  return new WorkerManager<TContainer>(logger);
 }

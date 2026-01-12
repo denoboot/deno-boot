@@ -1,15 +1,15 @@
+// deno-lint-ignore-file no-explicit-any
 // engine/plugins/blog/plugin.ts
 /**
  * Blog Plugin
  * Complete blog implementation with markdown support
  */
 
-import { Container } from "@denoboot/di/mod.ts";
 import { Logger } from "@denoboot/logger";
-import { EventEmitter } from "@denoboot/events";
 import { DatabaseDriver } from "@denoboot/types";
-import { defineOakPlugin } from "@denoboot/oak/mod.ts";
+import { defineOakPlugin, OakEngineContainer } from "@denoboot/oak/mod.ts";
 import { WorkerManager } from "@denoboot/engine/worker-manager.ts";
+import { Tenant } from "@denoboot/engine";
 
 export const BlogPlugin = defineOakPlugin({
   name: "blog",
@@ -18,8 +18,8 @@ export const BlogPlugin = defineOakPlugin({
   type: 'client-server',
 
   async init(container, config): Promise<void> {
-    const logger = container.resolve<Logger>("logger");
-    const events = container.resolve<EventEmitter>("events");
+    const logger = container.resolve("logger");
+    const events = container.resolve("events");
 
     // Register blog service factory for each tenant
     container.registerFactory("blog", (c) => {
@@ -27,14 +27,14 @@ export const BlogPlugin = defineOakPlugin({
     });
 
     // Listen for tenant initialization
-    events.on("tenant:initialized", async (data: any) => {
-      const { tenant, container: tenantContainer } = data;
+    events.on<{ tenant: Tenant; container: OakEngineContainer<{ blog: BlogService }> }>("tenant:initialized", async (data) => {
+      const { tenant, container: tenantContainer } = data || {};
       
-      if (tenant.plugins.includes("blog")) {
+      if (tenantContainer && tenant && tenant.plugins.includes("blog")) {
         logger.debug(`Setting up blog for tenant: ${tenant.id}`);
         
         // Initialize blog service
-        const blog = tenantContainer.resolve("blog");
+        const blog = await tenantContainer.resolveAsync("blog");
         await blog.initialize();
       }
     });
@@ -46,7 +46,7 @@ export const BlogPlugin = defineOakPlugin({
       path: "/blog",
       tenant: true,
       handler: (kwargs) => async (ctx) => {
-        const blog = kwargs.container.resolve<BlogService>("blog");
+        const blog = await kwargs.container.resolveAsync<BlogService>("blog");
         const posts = await blog.listPosts();
         const views = kwargs.container.resolve("views");
 
@@ -67,7 +67,7 @@ export const BlogPlugin = defineOakPlugin({
       tenant: true,
       handler({ container }) {
         return async (ctx) => {
-        const blog = container.resolve<BlogService>("blog");
+        const blog = await container.resolveAsync<BlogService>("blog");
         const post = await blog.getPost(ctx.params.slug!);
 
         // if (!post) {
@@ -95,7 +95,7 @@ export const BlogPlugin = defineOakPlugin({
       tenant: true,
       handler({ container }) {
         return async (ctx) => {
-        const blog = container.resolve<BlogService>("blog");
+        const blog = await container.resolveAsync<BlogService>("blog");
         const body = await ctx.request.body.json()
 
         // Validate input
@@ -151,42 +151,42 @@ export const BlogPlugin = defineOakPlugin({
       tenant: true,
       handler({ container }) {
        return async (ctx) => {
-        const blog = container.resolve<BlogService>("blog");
+        const blog = await container.resolveAsync<BlogService>("blog");
         await blog.deletePost(ctx.params.slug!);
         ctx.response.body = { success: true };
       }
       },
     },
-    {
-      method: "GET",
-      path: "/tenant/:tenantId/blog",
-      tenant: true,
-      name: "tenant-blog-list",
-      handler({container}) {
-        return async (ctx) => {
-         const blog = container.resolve<BlogService>("blog");
-        const posts = await blog.listPosts();
-        const views = container.resolve("views");
+    // {
+    //   method: "GET",
+    //   path: "/tenant/:tenantId/blog",
+    //   tenant: true,
+    //   name: "tenant-blog-list",
+    //   handler({container}) {
+    //     return async (ctx) => {
+    //      const blog = await container.resolveAsync<BlogService>("blog");
+    //     const posts = await blog.listPosts();
+    //     const views = container.resolve("views");
 
-        const html = await views.render("blog/list", {
-          posts,
-          tenant: ctx.state.tenant,
-        }, {
-          plugin: "blog",
-        });
+    //     const html = await views.render("blog/list", {
+    //       posts,
+    //       tenant: ctx.state.tenant,
+    //     }, {
+    //       plugin: "blog",
+    //     });
 
-        ctx.response.type = "text/html";
-        ctx.response.body = html;
-      }
-      },
-    },
+    //     ctx.response.type = "text/html";
+    //     ctx.response.body = html;
+    //   }
+    //   },
+    // },
   ],
 
   workers: [
     {
       name: "process-markdown",
       handler: async (payload, container) => {
-        const logger = container.resolve<Logger>("logger");
+        const logger = container.resolve("logger");
         logger.debug("Processing markdown");
 
         const { markdown } = payload.data as { markdown: string };
@@ -195,10 +195,10 @@ export const BlogPlugin = defineOakPlugin({
         // In production, use: https://deno.land/x/marked or similar
         const html = convertMarkdownToHTML(markdown);
 
-        return {
+        return await Promise.resolve({
           success: true,
           data: { html },
-        };
+        });
       },
     },
   ],
@@ -254,18 +254,18 @@ function convertMarkdownToHTML(markdown: string): string {
  * Blog Service
  */
 class BlogService {
-  private container: Container;
+  private container: OakEngineContainer;
   private posts: Map<string, any> = new Map();
   private initialized = false;
 
-  constructor(container: Container) {
+  constructor(container: OakEngineContainer) {
     this.container = container;
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    const logger = this.container.resolve<Logger>("logger");
+    const logger = this.container.resolve("logger");
     logger.debug("Initializing blog service");
 
     // Try to create posts table if using SQL database

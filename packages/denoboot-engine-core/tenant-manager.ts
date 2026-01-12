@@ -1,15 +1,17 @@
+// deno-lint-ignore-file no-explicit-any
 // core/tenant-manager.ts
 /**
- * Tenant Manager - FIXED VERSION
- * Enhanced with better logging and debugging for tenant resolution
+ * Tenant Manager
+ * With logging and debugging for tenant resolution
  */
 
 import type { Container } from "@denoboot/di/mod.ts";
 import type { Logger } from "@denoboot/logger/mod.ts";
-import { EventEmitter } from "@denoboot/events";
+import type { EventEmitter } from "@denoboot/events/mod.ts";
 
 export interface Tenant {
   id: string;
+  identifier: string;
   name: string;
   domain?: string;
   subdomain?: string;
@@ -298,7 +300,7 @@ export class TenantManager {
     container.register("tenant", tenant);
     this.containers.set(tenant.id, container);
 
-    this.logger.info(`Tenant registered: ${tenant.id} (${tenant.name})`);
+    this.logger.debug(`Tenant registered: ${tenant.id} (${tenant.name})`);
 
     // Emit event
     if (this.eventEmitter) {

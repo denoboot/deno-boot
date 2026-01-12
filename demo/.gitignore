@@ -154,3 +154,6 @@ dist
 # End of https://www.toptal.com/developers/gitignore/api/deno,node
 
 .out
+
+# Deno Boot
+.denoboot
