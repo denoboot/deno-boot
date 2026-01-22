@@ -10,6 +10,7 @@ export * from "./tenant-manager.ts";
 export * from "./plugin-manager.ts";
 export * from "./worker-manager.ts";
 export * from "./router.ts";
+export * from "./runtime/mod.ts";
 
 
 export function defineBootPlugin<TAppMiddleware extends AnyMiddleware = AnyMiddleware, TRouterMiddleware extends AnyMiddleware = AnyMiddleware, TContainer extends Container = Container>($: DenoBootEnginePlugin<TAppMiddleware, TRouterMiddleware, TRouterMiddleware, TContainer>) {

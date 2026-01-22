@@ -45,9 +45,9 @@ export const OakDashboardPlugin = defineOakPlugin({
       name: "tenant-dashboard",
       handler: (kwargs) => async (ctx) => {
         const tenant = kwargs.tenant!;
-        const views = kwargs.container.resolve("views");
+        const runtime = kwargs.container.resolve("runtime");
 
-        const html = await views.render(
+        const html = await runtime.render(
           'dashboard',
           {
             tenant,
@@ -60,10 +60,6 @@ export const OakDashboardPlugin = defineOakPlugin({
                 // 'dashboard.css': "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css", // TODO: Remove this. This is just for testing remote assets
                 // 'dashboard.js': "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js", // TODO: Remove this. This is just for testing remote assets
             },
-          },
-          {
-            tenant,
-            plugin: "oak-dashboard",
           }
         );
 
@@ -75,7 +71,7 @@ export const OakDashboardPlugin = defineOakPlugin({
 
   workers: [],
 
-  viewPaths: ["../packages-engine-plugins/denoboot-oak-dashboard-plugin/views"] // TODO: Fix this -> This should be relative to the plugin
+  viewPaths: ["../packages-engine-plugins/denoboot-oak-dashboard-plugin/runtime"] // TODO: Fix this -> This should be relative to the plugin
 });
 
 /**

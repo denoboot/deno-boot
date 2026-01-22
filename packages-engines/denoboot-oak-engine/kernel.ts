@@ -18,15 +18,13 @@ import {
   type OakEngineRouterState,
   OakRouter,
 } from "./router.ts";
-import { ConfigLoader } from "@denoboot/config/mod.ts";
+import { DenoBootConfig } from "@denoboot/config/mod.ts";
 import { createLogger, type Logger } from "@denoboot/logger/mod.ts";
 import { createEventEmitter, type EventEmitter } from "@denoboot/events/mod.ts";
-import type { BootstrapOptions, DenoBootConfig } from "@denoboot/types/mod.ts";
-import { bootstrapConfigParser } from "@denoboot/utils/mod.ts";
 import type { DenoBootEngine } from "@denoboot/engine/engine.ts";
 import {
   createWorkerManager,
-  WorkerManager,
+  type WorkerManager,
   type WorkerPayload,
 } from "@denoboot/engine/worker-manager.ts";
 import {
@@ -50,7 +48,10 @@ import {
   errorHandleMiddleware,
   renderErrorPage,
 } from "./middleware/error-handle.ts";
-
+import {
+  createEtaRuntime,
+  DenoBootEtaRuntime,
+} from "@denoboot/engine/runtime/mod.ts";
 export interface OakEngineAppMiddleware<
   S extends Record<PropertyKey, any> = Record<string, any>,
 > extends Middleware<S> {}
@@ -67,6 +68,7 @@ export type OakEngineInternalServices<
   workers: WorkerManager;
   views: ViewEngine;
   router: OakRouter;
+  runtime: DenoBootEtaRuntime;
 } & T;
 
 export interface OakEngineContainer<
@@ -144,6 +146,8 @@ export class OakKernel<
    * Event Emitter
    */
   private eventEmitter: EventEmitter;
+
+  private runtime!: DenoBootEtaRuntime;
 
   constructor(config: DenoBootConfig) {
     this.config = config;
@@ -270,6 +274,20 @@ export class OakKernel<
     // Add plugin view paths
     this.addPluginViewPaths();
 
+    this.runtime = await createEtaRuntime({
+      sources: [
+        "@denoboot/engine?id=framework&priority=0",
+        "@denoboot/oak-dashboard-plugin?id=plugin&priority=100",
+        "@views",
+        "@plugins",
+      ],
+      engineOptions: {
+        watch: true,
+        cache: false,
+      },
+      logger: this.logger,
+    });
+    this.container.register("runtime", this.runtime);
     this.initialized = true;
   }
 
@@ -544,96 +562,4 @@ export class OakKernel<
   isDebug(): boolean {
     return this.config.debug || false;
   }
-}
-
-/**
- * Bootstrap the DenoBoot Engine
- *
- * @param options - Configuration options or path to config file
- * @default options = 'boot.config.ts'
- * @returns {Promise<DenoBootKernel>}
- */
-export async function oakEngine<
-  AS extends Record<PropertyKey, any> = Record<string, any>,
->(
-  /**
-   * Configuration options or path to config file
-   *
-   * @default 'boot.config.ts'
-   */
-  options: BootstrapOptions | string = "boot.config.ts",
-): Promise<OakKernel<AS>> {
-  const cfg = await bootstrapConfigParser(options);
-
-  // Validate configuration
-  ConfigLoader.validate(cfg.config);
-
-  // Create kernel
-  const kernel = new OakKernel<AS>(cfg.config);
-
-  // Use custom container if provided
-  if (cfg.container) {
-    // Transfer services to custom container
-    // (This is advanced usage)
-    kernel.setContainer(cfg.container);
-  }
-
-  // Set custom tenant resolver
-  if (cfg.tenantResolver) {
-    kernel.setTenantResolver(cfg.tenantResolver);
-  }
-
-  // Register plugins
-  if (cfg.plugins) {
-    for (const plugin of cfg.plugins) {
-      await kernel.registerPlugin(plugin);
-    }
-  }
-
-  // Load tenants from file
-  if (cfg.tenantsFile) {
-    const tenants = await ConfigLoader.loadTenants(cfg.tenantsFile);
-    kernel.registerTenants(tenants);
-  }
-
-  // Register tenants
-  if (cfg.tenants) {
-    kernel.registerTenants(cfg.tenants);
-  }
-
-  // Apply middleware
-  if (cfg.middleware) {
-    for (const middleware of cfg.middleware) {
-      kernel.use(middleware);
-    }
-  }
-  kernel.use((_ctx, next) => {
-    if (kernel.getRouter().getRoutes().filter((r) => r.path === "/").length <= 0) {
-      kernel.getRouter().register({
-        method: "GET",
-        path: "/",
-        tenant: false,
-        name: "core/root",
-        handler: (kwargs) => {
-          return async (ctx, _next) => {
-            const views = kwargs.container.resolve("views");
-            const html = await views.render("core/root", {
-              // app: ctx.app,
-              // env: ctx.env,
-              version: "0.1.0",
-            });
-            ctx.response.type = "text/html";
-            ctx.response.body = html;
-          };
-        },
-      });
-    }
-    return next();
-  })
-
-  // Initialize and boot
-  await kernel.initialize();
-  await kernel.boot();
-
-  return kernel;
 }

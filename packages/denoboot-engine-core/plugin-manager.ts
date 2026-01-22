@@ -291,6 +291,13 @@ export class PluginManager<
   }
 
   /**
+   * Get plugin count
+   */
+  getCount(): number {
+    return this.plugins.size;
+  }
+
+  /**
    * Topological sort for dependency resolution
    */
   private topologicalSort(): string[] {

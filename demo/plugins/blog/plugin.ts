@@ -48,13 +48,11 @@ export const BlogPlugin = defineOakPlugin({
       handler: (kwargs) => async (ctx) => {
         const blog = await kwargs.container.resolveAsync<BlogService>("blog");
         const posts = await blog.listPosts();
-        const views = kwargs.container.resolve("views");
+        const runtime = kwargs.container.resolve("runtime");
 
-        const html = await views.render("blog/list", {
+        const html = await runtime.render("blog/list", {
           posts,
           tenant: ctx.state.tenant,
-        }, {
-          plugin: "blog",
         });
 
         ctx.response.type = "text/html";
@@ -76,12 +74,10 @@ export const BlogPlugin = defineOakPlugin({
         //   return;
         // }
 
-        const views = container.resolve("views");
-        const html = await views.render("blog/post", {
+        const runtime = container.resolve("runtime");
+        const html = await runtime.render("blog/post", {
           post: post || {},
           tenant: ctx.state.tenant,
-        }, {
-          plugin: "blog",
         });
 
         ctx.response.type = "text/html";
@@ -166,9 +162,9 @@ export const BlogPlugin = defineOakPlugin({
     //     return async (ctx) => {
     //      const blog = await container.resolveAsync<BlogService>("blog");
     //     const posts = await blog.listPosts();
-    //     const views = container.resolve("views");
+    //     const runtime = container.resolve("runtime");
 
-    //     const html = await views.render("blog/list", {
+    //     const html = await runtime.render("blog/list", {
     //       posts,
     //       tenant: ctx.state.tenant,
     //     }, {
@@ -203,7 +199,7 @@ export const BlogPlugin = defineOakPlugin({
     },
   ],
 
-  viewPaths: ["./views"],
+  viewPaths: ["./runtime"],
 });
 
 /**

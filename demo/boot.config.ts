@@ -1,4 +1,4 @@
-import { ConfigLoader } from "@denoboot/config/mod.ts";
+import { defineBootConfig } from "@denoboot/config/mod.ts";
 
 // local plugins
 import { BlogPlugin } from "./plugins/blog/plugin.ts";
@@ -13,21 +13,18 @@ import { DenoKVPlugin } from "@denoboot/denokv-plugin/mod.ts";
 import { OakDashboardPlugin } from "@denoboot/oak-dashboard-plugin/mod.ts";
 import { OakFsRouterPlugin } from "@denoboot/oak-fs-router-plugin/mod.ts";
 
-const DEBUG = Deno.env.get("DEBUG") === "true";
-
-
-export default ConfigLoader.defineConfig({
-  config: {
-    port: parseInt(Deno.env.get("PORT") || "8000"),
-    hostname: Deno.env.get("HOSTNAME") || "localhost",
-    env: (Deno.env.get("DENO_ENV") || "development") as
-      | "development"
-      | "production",
-    logger: { level: Deno.env.get("LOG_LEVEL") || "info", useColors: true },
-    viewPaths: ["./views"],
-    assetPaths: ["./public"],
-    pluginPaths: ["./plugins"],
-    debug: DEBUG,
+export default defineBootConfig(({ config }) => ({
+  runtime: {},
+  storage: {},
+  engine: {
+    port: config.number("PORT", 8000),
+    hostname: config.string("HOSTNAME", "localhost"),
+    env: config.string("DENO_ENV", "development"),
+    logger: config.json("LOGGER", {
+      level: config.string("LOG_LEVEL", "info"),
+      useColors: config.bool("LOG_USE_COLORS", true),
+    }),
+    debug: config.bool("DEBUG", false),
   },
   plugins: [
     OakFsRouterPlugin,
@@ -38,9 +35,9 @@ export default ConfigLoader.defineConfig({
     BlogPlugin,
     AnalyticsPlugin,
   ],
-  tenantsFile: "./tenants.json",
+  tenants: config.string("TENANTS_SOURCE", "./tenants.json"),
   // middleware: [
-  //   // corsMiddleware({ origin: "*" }), 
+  //   // corsMiddleware({ origin: "*" }),
   //   // debugMiddleware({ debug: DEBUG }),
   // ],
-});
+}));

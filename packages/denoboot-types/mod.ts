@@ -65,25 +65,25 @@ export interface CacheDriver {
   has(key: string): Promise<boolean>;
 }
 
-/**
- * Bootstrap options for the engine
- */
-export interface BootstrapOptions {
-  config: DenoBootConfig;
-  // configFilename?: string;
-  plugins?: any[];
-  tenants?: any[];
-  tenantsFile?: string;
-  middleware?: any[];
-  tenantResolver?: any;
-  container?: any;
-  env?: string | Record<string, any>;
-  deno?:
-    | Record<string, any>
-    | ((denoJson: Record<string, any>) => Record<string, any>);
-}
+// /**
+//  * Bootstrap options for the engine
+//  */
+// export interface BootstrapOptions {
+//   config: DenoBootConfig;
+//   // configFilename?: string;
+//   plugins?: any[];
+//   tenants?: any[];
+//   tenantsFile?: string;
+//   middleware?: any[];
+//   tenantResolver?: any;
+//   container?: any;
+//   env?: string | Record<string, any>;
+//   deno?:
+//     | Record<string, any>
+//     | ((denoJson: Record<string, any>) => Record<string, any>);
+// }
 
-export type DefineConfig<T extends Record<string, any>> = BootstrapOptions & T;
+// export type DefineConfig<T extends Record<string, any>> = BootstrapOptions & T;
 
 // export function defineConfig<T extends Record<string, any>>(
 //   $: DefineConfig<T>

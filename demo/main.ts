@@ -16,9 +16,8 @@ const router = boot.getRouter();
 //   name: "home",
 //   handler: (kwargs) => {
 //     return async (ctx, _next) => {
-//     const views = kwargs.container.resolve("views");
-//     views.addPath(new URL("./views", import.meta.url).pathname);
-//     const html = await views.render("home", {
+//     const runtime = kwargs.container.resolve("runtime");
+//     const html = await runtime.render("home", {
 //       title: "Deno Boot Engine",
 //       description: "Multi-tenant plugin framework for Deno",
 //     });
@@ -41,8 +40,8 @@ router.register({
       status: "healthy",
       timestamp: new Date().toISOString(),
       stats: {
-        tenants: kwargs.container.resolve("tenantManager").listTenants().length,
-        plugins: kwargs.container.resolve("pluginManager").list().length,
+        tenants: kwargs.container.resolve("tenantManager").getTenantCount(),
+        plugins: kwargs.container.resolve("pluginManager").getCount(),
         workers: workers.getStats(),
       },
     };
@@ -95,7 +94,7 @@ router.register({
         tenantId: tenant?.id,
         data: body,
       },
-      kwargs.container.getParent() || kwargs.container
+      kwargs.container.getParentOrCurrent()
     );
     
     ctx.response.body = {

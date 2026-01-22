@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <title>
-    <%~ include('core/blocks/title', it) %>
+    <%~ include('blocks/title', it) %>
   </title>
 
-  <%~ include('core/blocks/head', it) %>
+  <%~ include('blocks/head', it) %>
 
   <style>
     :root {
@@ -87,7 +87,7 @@
 
   <div class="container">
 
-    <%~ include('core/blocks/content', it) %>
+    <%~ include('blocks/content', it) %>
 
     <footer>
       <p>

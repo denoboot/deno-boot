@@ -6,10 +6,60 @@
 
 // TODO: This should configure/orchestrate the loading and merging of configuration from multiple sources (FE/BE/CLI/ENV/CONFIG_FILE)
 
-import type { DenoBootConfig, DefineConfig } from "@denoboot/types/mod.ts";
-import { deepMerge, fileExists, loadJSON } from "@denoboot/utils/mod.ts";
-import type { Tenant } from "@denoboot/engine/tenant-manager.ts";
+import {
+  deepMerge,
+  fileExists,
+  loadJSON,
+  resolveImportPath,
+  tryCatch,
+} from "@denoboot/utils/mod.ts";
+import type { Tenant } from "@denoboot/engine/mod.ts";
+import {
+  decouple,
+  fromDefaults,
+  fromDenoEnv,
+  fromDotEnv,
+} from "@denoboot/decouple/mod.ts";
+import type { LoggerOptions } from "@denoboot/logger";
+import type { DenoBootRuntimeConfig } from "@denoboot/runtime/mod.ts";
 
+const config = decouple([
+  fromDenoEnv(),
+  fromDotEnv(),
+  fromDefaults({ PORT: "8000", hostname: "localhost" }),
+]);
+
+/**
+ * Base configuration for the engine
+ */
+export interface DenoBootConfig {
+  port?: number;
+  hostname?: string;
+  env?: "development" | "production" | "test";
+  logger?: LoggerOptions;
+  viewPaths?: string[];
+  assetPaths?: string[];
+  pluginPaths?: string[];
+  debug?: boolean;
+}
+
+/**
+ * Bootstrap options for the engine
+ */
+export interface BootstrapOptions {
+  runtime?: DenoBootRuntimeConfig;
+  engine?: DenoBootConfig;
+  // configFilename?: string;
+  plugins?: any[];
+  tenants?: string | Record<string, any>[];
+  middleware?: any[];
+  tenantResolver?: any;
+  container?: any;
+  env?: string | Record<string, any>;
+  deno?:
+    | Record<string, any>
+    | ((denoJson: Record<string, any>) => Record<string, any>);
+}
 
 const DEFAULT_CONFIG: DenoBootConfig = {
   port: 8000,
@@ -73,13 +123,25 @@ export class ConfigLoader {
   /**
    * Load tenants from file
    */
-  static async loadTenants(path: string): Promise<Tenant[]> {
-    if (!(await fileExists(path))) {
-      return [];
-    }
+  static async loadTenants<T extends string | Record<string, any>[]>(
+    source: T | undefined,
+  ): Promise<Tenant[]> {
+    if (!source) return [];
+    if (typeof source === "string") {
+      // if is http or https
+      if (source.startsWith("http://") || source.startsWith("https://")) {
+        const response = await fetch(source);
+        const data = await response.json();
+        return data?.tenants || Array.isArray(data) ? data : [];
+      }
 
-    const data = await loadJSON<{ tenants: Tenant[] }>(path);
-    return data.tenants || [];
+      if (!(await fileExists(source))) {
+        return [];
+      }
+      const data = await loadJSON<{ tenants: Tenant[] }>(source);
+      return data.tenants || [];
+    }
+    return source as Tenant[];
   }
 
   /**
@@ -105,15 +167,23 @@ export class ConfigLoader {
     }
   }
 
-  static defineConfig<T extends Record<string, any>>($: DefineConfig<T>) {
+  static defineConfig<T extends BootstrapOptions | object>(
+    $:
+      | T
+      | ((
+        args: { config: typeof config },
+      ) => T),
+  ) {
     // this.parseDenoJson($);
-    this.parseDotEnv($);
+    if (typeof $ === "function") {
+      return $({ config });
+    }
 
     return $;
   }
 
-  private static parseDenoJson<T extends Record<string, any>>(
-    $: DefineConfig<T>
+  private static parseDenoJson<T extends BootstrapOptions>(
+    $: T,
   ) {
     try {
       const $denoJson = Deno.readTextFileSync("./deno.json");
@@ -132,8 +202,8 @@ export class ConfigLoader {
     return $;
   }
 
-  private static parseDotEnv<T extends Record<string, any>>(
-    $: DefineConfig<T>
+  private static parseDotEnv<T extends BootstrapOptions>(
+    $: T,
   ) {
     if (!$.env) {
       $.env = ".env";
@@ -184,4 +254,45 @@ export class ConfigLoader {
 
     return env;
   }
+
+  static async resolveConfigFile<R extends Record<string, any>>(
+    config: string | R,
+    loader: "esm" | "deno" = "esm",
+  ): Promise<R> {
+    const codeFiles = [".ts", ".js", ".cjs", ".mjs"];
+
+    if (typeof config === "string") {
+      const useEsmImport = loader === "esm" ||
+        codeFiles.includes(config.slice(-3)) ||
+        codeFiles.includes(config.slice(-4));
+
+      // import file
+      if (useEsmImport) {
+        const [result, error] = await tryCatch(async () => {
+          const content = await import(resolveImportPath(config));
+          return content?.default || content;
+        }, `Failed to import config file "${config}" via ESM import`);
+
+        if (error) {
+          throw error;
+        }
+        return result as R;
+      }
+
+      // deno read text file
+      const [result, error] = await tryCatch(async () => {
+        const content = await Deno.readTextFile(resolveImportPath(config));
+        return JSON.parse(content) as R;
+      }, `Failed to read config file "${config}" via Deno.readTextFile`);
+
+      if (error) {
+        throw error;
+      }
+      return result as R;
+    }
+
+    return config as R;
+  }
 }
+
+export const defineBootConfig = ConfigLoader.defineConfig;

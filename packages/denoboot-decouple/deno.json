@@ -1,0 +1,8 @@
+{
+  "name": "@denoboot/decouple",
+  "version": "0.1.0",
+  "description": "Configuration decoupling for DenoBoot",
+  "exports": {
+    "./mod.ts": "./mod.ts"
+  }
+}

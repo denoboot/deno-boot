@@ -38,7 +38,17 @@ export interface Container<Entries extends Record<string, unknown> = any> {
 
   // Scoping
   createChild<ChildEntries extends Record<string, unknown> = Record<string, unknown>>(): Container<ChildEntries>;
+
+  /**
+   * Get the parent container, if any.
+   */
   getParent(): Container<Entries> | null;
+
+  /**
+   * Used when you want to resolve from the parent container if the service is not found in the current container.
+   * This is useful when you want to resolve a service from a parent container in a possible child container.
+   */
+  getParentOrCurrent(): Container<Entries>;
 
   // Introspection
   list(): (keyof Entries)[];
@@ -168,6 +178,10 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
 
   getParent(): Container<Entries> | null {
     return this.parent as Container<Entries> | null;
+  }
+
+  getParentOrCurrent(): Container<Entries> {
+    return (this.parent ?? this) as Container<Entries>;
   }
 
   /* ───────────────────────────────── Introspection ───────────────────────────── */

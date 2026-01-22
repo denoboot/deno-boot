@@ -3,7 +3,7 @@
  * Utility functions
  */
 
-export * from './figlet/figlet.ts';
+export * from "./figlet/figlet.ts";
 
 /**
  * Load JSON file
@@ -54,7 +54,7 @@ export async function ensureDir(path: string): Promise<void> {
  */
 export async function* walkDir(
   dir: string,
-  extensions?: string[]
+  extensions?: string[],
 ): AsyncIterableIterator<string> {
   try {
     for await (const entry of Deno.readDir(dir)) {
@@ -76,8 +76,11 @@ export async function* walkDir(
 /**
  * Sync Walk directory recursively
  */
-export function* walkDirSync(dir: string, extensions?: string[]): IterableIterator<string> {
-   try {
+export function* walkDirSync(
+  dir: string,
+  extensions?: string[],
+): IterableIterator<string> {
+  try {
     for (const entry of Deno.readDirSync(dir)) {
       const path = `${dir}/${entry.name}`;
 
@@ -113,7 +116,7 @@ export function deepMerge<T extends Record<string, unknown>>(
       if (isObject(sourceValue) && isObject(targetValue)) {
         result[key] = deepMerge(
           targetValue as Record<string, unknown>,
-          sourceValue as Record<string, unknown>
+          sourceValue as Record<string, unknown>,
         ) as T[Extract<keyof T, string>];
       } else {
         result[key] = sourceValue as T[Extract<keyof T, string>];
@@ -133,7 +136,7 @@ function isObject(item: unknown): item is Record<string, unknown> {
  */
 export async function tryCatch<T>(
   fn: () => Promise<T>,
-  errorMessage?: string
+  errorMessage?: string,
 ): Promise<[T | null, Error | null]> {
   try {
     const result = await fn();
@@ -151,7 +154,7 @@ export async function tryCatch<T>(
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: number | undefined;
 
@@ -176,7 +179,7 @@ export function generateId(prefix = ""): string {
  * Parse connection string
  */
 export function parseConnectionString(
-  connectionString: string
+  connectionString: string,
 ): Record<string, any> {
   const url = new URL(connectionString);
   return {
@@ -195,44 +198,4 @@ export function resolveImportPath(path: string): string {
   const url = new URL(path, `file://${cwd}/`);
   const resolvedPath = Deno.realPathSync(url.pathname);
   return resolvedPath;
-}
-
-export async function bootstrapConfigParser<R extends Record<string, any>>(
-  config: string | R,
-  loader: "import" | "deno" = "import"
-): Promise<R> {
-  const codeFiles = [".ts", ".js", ".cjs", ".mjs"];
-
-  if (typeof config === "string") {
-    const useEsmImport =
-      loader === "import" ||
-      codeFiles.includes(config.slice(-3)) ||
-      codeFiles.includes(config.slice(-4));
-
-    // import file
-    if (useEsmImport) {
-      const [result, error] = await tryCatch(async () => {
-        const content = await import(resolveImportPath(config));
-        return content?.default || content;
-      }, "Failed to import config file");
-
-      if (error) {
-        throw error;
-      }
-      return result as R;
-    }
-
-    // deno read text file
-    const [result, error] = await tryCatch(async () => {
-      const content = await Deno.readTextFile(resolveImportPath(config));
-      return JSON.parse(content) as R;
-    }, "Failed to read config file");
-
-    if (error) {
-      throw error;
-    }
-    return result as R;
-  }
-
-  return config as R;
 }
