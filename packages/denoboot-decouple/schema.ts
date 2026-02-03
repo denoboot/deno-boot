@@ -1,11 +1,12 @@
-import { DecoupledVar } from "./var.ts";
+import type { DecoupledConfig } from "./decouple.ts";
+import type { DecoupledVar } from "./var.ts";
 
 export type Schema<T> = {
   [K in keyof T]: (v: DecoupledVar) => T[K];
 };
 
 export function applySchema<T>(
-  config: any,
+  config: DecoupledConfig,
   schema: Schema<T>,
 ): T {
   const result: Partial<T> = {};

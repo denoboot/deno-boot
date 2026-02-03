@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/admin",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Admin interface for DenoBoot engine",
   "exports": {
     ".": "./mod.ts"

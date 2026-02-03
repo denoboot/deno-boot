@@ -34,18 +34,18 @@ router.register({
   name: "health",
   handler: (kwargs) => {
     return (ctx) => {
-    const workers = kwargs.container.resolve("workers");
+      const workers = kwargs.container.resolve("workers");
 
-    ctx.response.body = {
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      stats: {
-        tenants: kwargs.container.resolve("tenantManager").getTenantCount(),
-        plugins: kwargs.container.resolve("pluginManager").getCount(),
-        workers: workers.getStats(),
-      },
+      ctx.response.body = {
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        stats: {
+          tenants: kwargs.container.resolve("tenantManager").getTenantCount(),
+          plugins: kwargs.container.resolve("pluginManager").getCount(),
+          workers: workers.getStats(),
+        },
+      };
     };
-  }
   },
 });
 
@@ -57,20 +57,19 @@ router.register({
   handler: (kwargs) => {
     return (ctx) => {
       const tenantManager = kwargs.container.resolve("tenantManager");
-    const tenants = tenantManager.listTenants().map((t) => ({
-      id: t.id,
-      name: t.name,
-      domain: t.domain,
-      subdomain: t.subdomain,
-      plugins: t.plugins,
-      enabled: t.enabled !== false,
-    }));
+      const tenants = tenantManager.listTenants().map((t) => ({
+        id: t.id,
+        name: t.name,
+        domain: t.domain,
+        subdomain: t.subdomain,
+        plugins: t.plugins,
+        enabled: t.enabled !== false,
+      }));
 
-    ctx.response.body = { tenants };
-  }
+      ctx.response.body = { tenants };
+    };
   },
 });
-
 
 // Worker dispatch endpoint
 router.register({
@@ -79,30 +78,30 @@ router.register({
   tenant: true,
   name: "dispatch-worker",
   handler: (kwargs) => {
-    return async (ctx, ) => {
-    const plugin = ctx.params.plugin;
-    const worker = ctx.params.worker;
-    const tenant = ctx.state.tenant;
-    
-    const body = await ctx.request.body.json();
-    
-    const workers = kwargs.container.resolve("workers");
-    const jobId = await workers.dispatch(
-      plugin,
-      worker,
-      {
-        tenantId: tenant?.id,
-        data: body,
-      },
-      kwargs.container.getParentOrCurrent()
-    );
-    
-    ctx.response.body = {
-      success: true,
-      jobId,
-      message: "Worker dispatched",
+    return async (ctx) => {
+      const plugin = ctx.params.plugin;
+      const worker = ctx.params.worker;
+      const tenant = ctx.state.tenant;
+
+      const body = await ctx.request.body.json();
+
+      const workers = kwargs.container.resolve("workers");
+      const jobId = await workers.dispatch(
+        plugin,
+        worker,
+        {
+          tenantId: tenant?.id,
+          data: body,
+        },
+        kwargs.container.getParentOrCurrent(),
+      );
+
+      ctx.response.body = {
+        success: true,
+        jobId,
+        message: "Worker dispatched",
+      };
     };
-  }
   },
 });
 
@@ -114,9 +113,9 @@ router.register({
   name: "worker-stats",
   handler: (kwargs) => {
     return (ctx) => {
-    const workers = kwargs.container.resolve("workers");
-    ctx.response.body = workers.getStats();
-  }
+      const workers = kwargs.container.resolve("workers");
+      ctx.response.body = workers.getStats();
+    };
   },
 });
 
@@ -127,23 +126,19 @@ router.register({
   name: "worker-job",
   handler: (kwargs) => {
     return (ctx) => {
-    const workers = kwargs.container.resolve("workers");
-    const job = workers.getJob(ctx.params.jobId);
-    
-    if (!job) {
-      ctx.response.status = 404;
-      ctx.response.body = { error: "Job not found" };
-      return;
-    }
-    
-    ctx.response.body = job;
-  }
+      const workers = kwargs.container.resolve("workers");
+      const job = workers.getJob(ctx.params.jobId);
+
+      if (!job) {
+        ctx.response.status = 404;
+        ctx.response.body = { error: "Job not found" };
+        return;
+      }
+
+      ctx.response.body = job;
+    };
   },
 });
-
-
-
-
 
 // Start the server
 await boot.listen();

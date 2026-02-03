@@ -5,7 +5,6 @@ import type { RuntimePlugin } from "./plugin.ts";
 
 type NonNullableFunction<T> = T extends (...args: any[]) => any ? T : never;
 
-
 export class PluginManager {
   constructor(private plugins: RuntimePlugin[]) {}
 
@@ -27,9 +26,9 @@ export class PluginManager {
   ): Promise<void> {
     await Promise.all(
       this.plugins
-        .map(p => p[name])
+        .map((p) => p[name])
         .filter(Boolean)
-        .map(hook => (hook as any)(...args)),
+        .map((hook) => (hook as any)(...args)),
     );
   }
 

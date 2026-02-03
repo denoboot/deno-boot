@@ -1,0 +1,6 @@
+{
+  "name": "@denoboot/prompts",
+  "version": "0.0.0",
+  "description": "Deno native prompts api for creating interactive CLI prompts",
+  "exports": "./mod.ts"
+}

@@ -11,20 +11,20 @@ export class Optimizer {
     return {
       minify: this.config.build.minify ?? true,
       treeShaking: true,
-      
+
       // Code splitting for better caching
       splitting: this.config.build.splitting ?? true,
       chunkNames: "chunks/[name]-[hash]",
-      
+
       // Source maps in production
       sourcemap: this.config.build.sourcemap ?? false,
-      
+
       // Drop console/debugger in production
       drop: ["console", "debugger"],
-      
+
       // Target modern browsers
       target: ["es2020", "chrome90", "firefox88", "safari14"],
-      
+
       // Legal comments handling
       legalComments: "external",
     };
@@ -35,12 +35,12 @@ export class Optimizer {
     // - Compress assets (gzip, brotli)
     // - Generate preload hints
     // - Optimize images
-    
+
     for await (const entry of Deno.readDir(outDir)) {
       if (entry.isFile && entry.name.endsWith(".js")) {
         const path = `${outDir}/${entry.name}`;
         const content = await Deno.readFile(path);
-        
+
         // Example: Create gzip version
         const compressed = await this.gzip(content);
         await Deno.writeFile(`${path}.gz`, compressed);

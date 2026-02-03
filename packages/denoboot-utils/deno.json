@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/utils",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Utility functions for DenoBoot engine",
   "exports": {
     ".": "./mod.ts"

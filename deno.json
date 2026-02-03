@@ -8,6 +8,10 @@
     "clean:install": "deno task clean:prune && deno install"
   },
 
+  "fmt": {
+    "lineWidth": 120
+  },
+
   "workspace": [
     "packages/*",
     "packages-internal/*",
@@ -16,5 +20,6 @@
     "labs/*",
     "demo/"
   ],
-  "importMap": "./import_map.json"
+  "importMap": "./import_map.json",
+  "nodeModulesDir": "auto"
 }

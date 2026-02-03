@@ -3,14 +3,17 @@
 // ============================================================================
 import type { ResolvedConfig } from "./loader.ts";
 
-export const DEFAULT_CONFIG: Omit<ResolvedConfig, "mode" | "configPath" | "root"> = {
-  entry: "src/main.ts",
+export const DEFAULT_CONFIG: Omit<
+  ResolvedConfig,
+  "mode" | "configPath" | "root"
+> = {
+  entry: "./app/main.ts",
   server: {
     port: 3000,
     host: "localhost",
   },
   build: {
-    outDir: "dist",
+    outDir: ".denoboot/dist",
     splitting: true,
     external: [],
     sourcemap: true,

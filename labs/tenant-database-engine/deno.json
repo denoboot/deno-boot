@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/database-engine",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "A modular multi-tenant engine with background workers for Deno",
   "exports": {
     ".": "./mod.ts",

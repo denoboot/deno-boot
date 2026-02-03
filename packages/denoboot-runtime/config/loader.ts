@@ -54,13 +54,13 @@ export async function loadConfig(
   mode: "development" | "production",
   configPath?: string,
 ): Promise<ResolvedConfig> {
-  const resolvedConfigPath = configPath ?? join(root, "runtime.config.ts");
-  
+  const resolvedConfigPath = configPath ?? join(root, "boot.config.ts");
+
   let userConfig: UserConfig = {};
-  
+
   try {
     const mod = await import(`file://${resolvedConfigPath}`);
-    userConfig = mod.default ?? {};
+    userConfig = mod.default?.runtime ?? {};
 
     // Apply mode-specific overrides
     if (typeof userConfig === "object" && mode in userConfig) {
@@ -73,10 +73,10 @@ export async function loadConfig(
     }
     // No config file is OK, use defaults
   }
-  
+
   // Merge with defaults
   const resolved: ResolvedConfig = {
-    root,
+    root: userConfig?.root || root,
     mode,
     configPath: resolvedConfigPath,
     entry: userConfig.entry ?? DEFAULT_CONFIG.entry,
@@ -97,23 +97,26 @@ export async function loadConfig(
     },
     plugins: userConfig.plugins ?? DEFAULT_CONFIG.plugins,
   };
-  
+
   return resolved;
 }
 
 function deepMerge<T>(target: T, source: Partial<T>): T {
   const result = { ...target };
-  
+
   for (const key in source) {
     const sourceValue = source[key];
     const targetValue = (target as any)[key];
-    
-    if (sourceValue && typeof sourceValue === "object" && !Array.isArray(sourceValue)) {
+
+    if (
+      sourceValue && typeof sourceValue === "object" &&
+      !Array.isArray(sourceValue)
+    ) {
       (result as any)[key] = deepMerge(targetValue || {}, sourceValue);
     } else if (sourceValue !== undefined) {
       (result as any)[key] = sourceValue;
     }
   }
-  
+
   return result;
 }

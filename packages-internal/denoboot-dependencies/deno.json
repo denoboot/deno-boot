@@ -1,12 +1,13 @@
 {
   "name": "@denoboot/x",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Dependencies for Deno Boot",
   "exports": {
     "./eta.ts": "./eta.ts",
     "./oak.ts": "./oak.ts",
     "./sqlite.ts": "./sqlite.ts",
     "./mysql.ts": "./mysql.ts",
-    "./esbuild.ts": "./esbuild.ts"
+    "./esbuild.ts": "./esbuild.ts",
+    "./std/": "./std/"
   }
 }

@@ -71,8 +71,9 @@ export class Watcher {
       "dist",
       ".DS_Store",
       "*.log",
+      ".denoboot",
     ];
 
-    return ignored.some(pattern => path.includes(pattern));
+    return ignored.some((pattern) => path.includes(pattern));
   }
 }

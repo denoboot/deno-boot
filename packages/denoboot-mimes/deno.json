@@ -1,0 +1,6 @@
+{
+  "name": "@denoboot/mimes",
+  "version": "0.0.0",
+  "description": "MIME type lookup and registration",
+  "exports": "./mod.ts"
+}

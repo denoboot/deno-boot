@@ -1,0 +1,6 @@
+{
+  "name": "@denoboot/ansi-tools",
+  "version": "0.0.0",
+  "description": "ANSI color and formatting utilities for Deno",
+  "exports": "./mod.ts"
+}

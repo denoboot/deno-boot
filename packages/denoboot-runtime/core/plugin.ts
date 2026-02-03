@@ -17,26 +17,26 @@ export interface HMRContext {
 
 export interface RuntimePlugin {
   name: string;
-  
+
   // Configuration
   configResolved?(config: ResolvedConfig): void | Promise<void>;
-  
+
   // Build lifecycle
   buildStart?(): void | Promise<void>;
   buildEnd?(result: BuildResult): void | Promise<void>;
-  
+
   // File watching
   onFileChange?(path: string): void | Promise<void>;
-  
+
   // esbuild integration
   esbuildPlugins?(): esbuild.Plugin[];
-  
+
   // HTML transforms
   transformIndexHtml?(html: string): string | Promise<string>;
-  
+
   // Dev server
   configureServer?(server: DevServer): void | Promise<void>;
-  
+
   // HMR
   handleHotUpdate?(ctx: HMRContext): void | Promise<void>;
 }

@@ -1,45 +1,37 @@
 // ============================================================================
 // server/static.ts - Static file serving
 // ============================================================================
-import { extname } from "@denoboot/x/std/path.ts";
+import { extname, join } from "@denoboot/x/std/path.ts";
+import { mimes } from "@denoboot/mimes";
 
 export class StaticFileServer {
-  private mimeTypes = new Map<string, string>([
-    [".html", "text/html"],
-    [".css", "text/css"],
-    [".scss", "text/css"],
-    [".sass", "text/css"],
-    [".js", "application/javascript"],
-    [".ts", "application/javascript"],
-    [".tsx", "application/javascript"],
-    [".json", "application/json"],
-    [".png", "image/png"],
-    [".jpg", "image/jpeg"],
-    [".jpeg", "image/jpeg"],
-    [".gif", "image/gif"],
-    [".svg", "image/svg+xml"],
-    [".ico", "image/x-icon"],
-    [".woff", "font/woff"],
-    [".woff2", "font/woff2"],
-    [".ttf", "font/ttf"],
-    [".eot", "application/vnd.ms-fontobject"],
-  ]);
+  private mimeTypes = new Map<string, string>(
+    Object.entries(mimes).map(([k, v]) => [`.${k}`, v]),
+  );
 
   constructor(private root: string) {}
 
   async serve(pathname: string): Promise<Response | null> {
     try {
-      const filePath = `${this.root}${pathname}`;
-      const stat = await Deno.stat(filePath);
+      const filePath = join(this.root, pathname);
+      const stat = Deno.statSync(filePath);
 
       if (stat.isDirectory) {
         // Try index.html
-        return this.serve(`${pathname}/index.html`);
+        return this.serve(join(pathname, "index.html"));
       }
-
-      const file = await Deno.readFile(filePath);
+      const file = Deno.readFileSync(filePath);
       const ext = extname(pathname);
-      const contentType = this.mimeTypes.get(ext) || "application/octet-stream";
+      // dev and is ts or tsx
+      if (ext === ".ts" || ext === ".tsx") {
+        mimes[ext.substring(1)] = mimes.js;
+        // TODO: compile ts/tsx to js
+        this.mimeTypes.set(ext, mimes[ext.substring(1)]);
+      }
+      const contentType = this.mimeTypes.get(ext);
+      if (!contentType) {
+        return await Promise.reject(null);
+      }
 
       return new Response(file, {
         headers: {

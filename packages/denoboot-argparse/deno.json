@@ -1,0 +1,6 @@
+{
+  "name": "@denoboot/argparse",
+  "version": "0.0.0",
+  "description": "A tiny, dependency-free argument parser",
+  "exports": "./mod.ts"
+}

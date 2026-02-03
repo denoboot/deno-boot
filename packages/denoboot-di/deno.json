@@ -1,7 +1,7 @@
 {
   "name": "@denoboot/di",
-  "version": "0.1.0",
-  "description": "Dependency Injection for DenoBoot",
+  "version": "0.0.0",
+  "description": "Dependency Injection Container with Sync + async resolution, Singleton + factory + instance, Hierarchical scoping and Lifecycle management",
   "exports": {
     "./mod.ts": "./mod.ts"
   }

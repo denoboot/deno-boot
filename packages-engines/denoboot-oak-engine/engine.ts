@@ -5,7 +5,7 @@
  * Main orchestrator for the engine lifecycle
  */
 
-import { type BootstrapOptions, ConfigLoader } from "@denoboot/config/mod.ts";
+import { ConfigLoader, type DenoBootUserConfig } from "@denoboot/config/mod.ts";
 import { OakKernel } from "./kernel.ts";
 
 /**
@@ -23,15 +23,15 @@ export async function oakEngine<
    *
    * @default 'boot.config.ts'
    */
-  options: BootstrapOptions | string = "boot.config.ts",
+  options: DenoBootUserConfig["server"] | string = "boot.config.ts",
 ): Promise<OakKernel<AS>> {
   const cfg = await ConfigLoader.resolveConfigFile(options);
 
   // Validate configuration
-  ConfigLoader.validate(cfg.engine!);
+  ConfigLoader.validate(cfg);
 
   // Create kernel
-  const kernel = new OakKernel<AS>(cfg.engine!);
+  const kernel = new OakKernel<AS>(cfg);
 
   // Use custom container if provided
   if (cfg.container) {
@@ -45,7 +45,7 @@ export async function oakEngine<
     kernel.setTenantResolver(cfg.tenantResolver);
   }
 
-  // Register plugins
+  // // Register plugins
   if (cfg.plugins) {
     for (const plugin of cfg.plugins) {
       await kernel.registerPlugin(plugin);

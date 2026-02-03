@@ -4,7 +4,7 @@
 
 import * as esbuild from "@denoboot/x/esbuild.ts";
 import { EventEmitter } from "./events.ts";
-import { RuntimeContext, createContext } from "./context.ts";
+import { createContext, RuntimeContext } from "./context.ts";
 import { PluginManager } from "./plugin-manager.ts";
 import { loadConfig, type ResolvedConfig } from "../config/loader.ts";
 import { Builder } from "../build/builder.ts";
@@ -14,7 +14,8 @@ import { Watcher } from "../dev/watcher.ts";
 import type { RuntimePlugin } from "./plugin.ts";
 import { HMREngine } from "../hmr/engine.ts";
 import { DependencyGraph } from "../hmr/graph.ts";
-
+import { errorOverlayPlugin } from "../plugins/errorOverlay.ts";
+import { PreviewServer } from "../server/preview-server.ts";
 // runtime/core/runtime.ts
 export interface RuntimeOptions {
   root: string;
@@ -29,15 +30,15 @@ export interface Runtime {
   start(): Promise<void>;
   stop(): Promise<void>;
   restart(): Promise<void>;
-  
+
   // Build operations
   build(): Promise<esbuild.BuildResult>;
   rebuild(): Promise<esbuild.BuildResult>;
-  
+
   // State access
   getState(): RuntimeState;
   on(event: string, handler: Function): void;
-  
+
   // Internal
   readonly context: RuntimeContext;
 }
@@ -52,8 +53,6 @@ export interface Runtime {
 //   plugins: RuntimePlugin[];
 //   graph: DependencyGraph;
 // }
-
-
 
 export interface RuntimeOptions {
   root: string;
@@ -71,7 +70,13 @@ export interface BuildResult {
   duration: number;
 }
 
-type RuntimeState = "idle" | "starting" | "running" | "stopping" | "stopped" | "error";
+type RuntimeState =
+  | "idle"
+  | "starting"
+  | "running"
+  | "stopping"
+  | "stopped"
+  | "error";
 
 // export interface Runtime {
 //   start(): Promise<void>;
@@ -95,7 +100,7 @@ class RuntimeImpl extends EventEmitter implements Runtime {
     this.pluginManager = new PluginManager([]);
   }
 
-  async start(): Promise<void> {
+  async start(isPreview = false): Promise<void> {
     if (this.state !== "idle" && this.state !== "stopped") {
       throw new Error(`Cannot start runtime in state: ${this.state}`);
     }
@@ -115,6 +120,7 @@ class RuntimeImpl extends EventEmitter implements Runtime {
       this.context.plugins = [
         ...this.context.options.plugins ?? [],
         ...this.context.config.plugins,
+        // errorOverlayPlugin(),
       ];
       this.pluginManager = new PluginManager(this.context.plugins);
       await this.pluginManager.runHook("configResolved", this.context.config);
@@ -132,7 +138,10 @@ class RuntimeImpl extends EventEmitter implements Runtime {
       await this.pluginManager.runHook("buildEnd", result);
 
       // 5. Start dev server (dev mode only)
-      if (this.context.options.mode === "development" && this.context.options.hmr !== false) {
+      if (
+        this.context.options.mode === "development" &&
+        this.context.options.hmr !== false
+      ) {
         this.context.hmr = new HMREngineImpl(
           this.context.builder,
           this.context.config,
@@ -155,6 +164,15 @@ class RuntimeImpl extends EventEmitter implements Runtime {
           this.pluginManager,
         );
         await this.context.watcher.start();
+      } else if (isPreview) {
+        this.context.config.server.port = 4000;
+        this.context.config.server.host = "localhost";
+        this.context.config.root = "./.denoboot/dist/";
+        const previewServer = new PreviewServer(
+          this.context.builder,
+          this.context.config,
+        );
+        await previewServer.start();
       }
 
       this.state = "running";
@@ -192,10 +210,9 @@ class RuntimeImpl extends EventEmitter implements Runtime {
     await this.start();
   }
 
-  // @ts-ignore
   async build(): Promise<BuildResult> {
     const startTime = Date.now();
-    
+
     if (!this.context.builder) {
       // Build-only mode (no dev server)
       this.context.config = await loadConfig(
@@ -227,10 +244,11 @@ class RuntimeImpl extends EventEmitter implements Runtime {
     };
   }
 
-  // @ts-ignore
   async rebuild(): Promise<BuildResult> {
     if (!this.context.builder) {
-      throw new Error("Builder not initialized. Call start() or build() first.");
+      throw new Error(
+        "Builder not initialized. Call start() or build() first.",
+      );
     }
 
     const startTime = Date.now();

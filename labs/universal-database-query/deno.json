@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/database-query",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "A universal database query builder for Deno",
   "exports": {
     ".": "./mod.ts"

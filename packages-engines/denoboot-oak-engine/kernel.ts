@@ -50,8 +50,9 @@ import {
 } from "./middleware/error-handle.ts";
 import {
   createEtaRuntime,
-  DenoBootEtaRuntime,
-} from "@denoboot/engine/runtime/mod.ts";
+  type DenoBootEtaRuntime,
+} from "@denoboot/eta/mod.ts";
+
 export interface OakEngineAppMiddleware<
   S extends Record<PropertyKey, any> = Record<string, any>,
 > extends Middleware<S> {}
@@ -149,7 +150,7 @@ export class OakKernel<
 
   private runtime!: DenoBootEtaRuntime;
 
-  constructor(config: DenoBootConfig) {
+  constructor(config: DenoBootConfig = {}) {
     this.config = config;
     this.app = new Application<AS>();
     this.container = createContainer<OakEngineInternalServices>();
@@ -274,6 +275,13 @@ export class OakKernel<
     // Add plugin view paths
     this.addPluginViewPaths();
 
+    // Register plugins
+    if (this.config.plugins) {
+      for (const plugin of this.config.plugins) {
+        await this.registerPlugin(plugin);
+      }
+    }
+
     this.runtime = await createEtaRuntime({
       sources: [
         "@denoboot/engine?id=framework&priority=0",
@@ -382,7 +390,7 @@ export class OakKernel<
     this.app.use(renderErrorPage(this.container));
   }
 
-  async bootLogDiagnostics(enabled = true) {
+  async bootLogDiagnostics(enabled = false) {
     if (!enabled) return;
 
     // Print diagnostic information

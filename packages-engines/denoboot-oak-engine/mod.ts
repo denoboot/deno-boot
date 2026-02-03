@@ -30,7 +30,7 @@ export function defineOakPlugin(
   $.routes = $.routes?.map(defineOakPluginRoute);
   $.workers = $.workers?.map(defineOakPluginWorker);
   $.middleware = $.middleware?.map(defineOakPluginMiddleware);
-  return $ as Readonly<typeof $>;
+  return $;
 }
 
 export function defineOakPluginRoute<

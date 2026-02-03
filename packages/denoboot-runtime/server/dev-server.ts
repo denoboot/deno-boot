@@ -5,8 +5,16 @@ import type { Builder } from "../build/builder.ts";
 import type { HMREngine } from "../hmr/engine.ts";
 import type { ResolvedConfig } from "../config/loader.ts";
 import type { PluginManager } from "../core/plugin-manager.ts";
-import { MiddlewareStack, corsMiddleware, loggingMiddleware } from "./middleware.ts";
+import {
+  corsMiddleware,
+  loggingMiddleware,
+  MiddlewareStack,
+  tsTranspileMiddleware,
+} from "./middleware.ts";
 import { StaticFileServer } from "./static.ts";
+import { mimes } from "@denoboot/mimes";
+import { join } from "@denoboot/x/std/path.ts";
+// import { walkSync } from "@denoboot/x/std/fs.ts";
 
 export class DevServer {
   private server: Deno.HttpServer | null = null;
@@ -19,18 +27,35 @@ export class DevServer {
     private config: ResolvedConfig,
     private pluginManager: PluginManager,
   ) {
+    // for (
+    //   const entry of walkSync(config.root, {
+    //     exts: [".html"],
+    //     includeDirs: false,
+    //   })
+    // ) {
+    //   if (entry.path?.endsWith("index.html")) {
+    //     config.root = entry.path.replace("/index.html", "");
+    //   }
+    // }
+
     this.middleware = new MiddlewareStack();
     this.staticServer = new StaticFileServer(config.root);
-    
+
     // Setup default middleware
-    this.middleware.use(corsMiddleware());
+    // this.middleware.use(corsMiddleware());
     this.middleware.use(loggingMiddleware());
-    
+    // this.middleware.use(tsTranspileMiddleware(config.root));
+
     // Allow plugins to add middleware
     this.pluginManager.runHook("configureServer", this);
   }
 
-  use(middleware: (req: Request, next: () => Promise<Response>) => Promise<Response>): void {
+  use(
+    middleware: (
+      req: Request,
+      next: () => Promise<Response>,
+    ) => Promise<Response>,
+  ): void {
     this.middleware.use(middleware);
   }
 
@@ -53,6 +78,28 @@ export class DevServer {
 
   private async handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
+    const pathname = url.pathname;
+    const pathToFile = join(this.config.root, pathname);
+
+    // 0. ts|tsx
+    if (pathname.endsWith(".ts") || pathname.endsWith(".tsx")) {
+      // Transpile TS/TSX to JS
+      const source = await Deno.readTextFile(pathToFile);
+
+      const result = await this.builder.transform(source, {
+        loader: pathname.endsWith(".tsx") ? "tsx" : "ts",
+        format: "esm",
+        sourcemap: true,
+      });
+
+      return new Response(result.code, {
+        headers: {
+          "Content-Type": mimes.js,
+          "Cache-Control": "no-cache",
+          "X-Sourcemap": result.map ? `${pathToFile}.map` : "",
+        },
+      });
+    }
 
     // 1. HMR WebSocket upgrade
     if (url.pathname === "/__hmr") {
@@ -62,15 +109,16 @@ export class DevServer {
     // 2. HMR client script
     if (url.pathname === "/__hmr_client.js") {
       return new Response(HMR_CLIENT_CODE, {
-        headers: { "Content-Type": "application/javascript" },
+        headers: { "Content-Type": mimes.js },
       });
     }
 
     // 3. Serve from esbuild output (built modules)
-    if (url.pathname.startsWith("/__build/")) {
-      const modulePath = url.pathname.slice("/__build/".length);
+    const outDir = "/.denoboot/dist/";
+    if (url.pathname.startsWith(outDir)) {
+      const modulePath = url.pathname.slice(outDir.length);
       const output = this.builder.getOutput(modulePath);
-      
+
       if (output) {
         // Uint8Array<ArrayBufferLike> to BodyInit
         const body = new TextDecoder().decode(output.contents);
@@ -78,7 +126,7 @@ export class DevServer {
           headers: {
             "Content-Type": this.getContentType(modulePath),
             "Cache-Control": "no-cache",
-            "X-Sourcemap": output.map ? `/__build/${modulePath}.map` : "",
+            "X-Sourcemap": output.map ? join(outDir, `${modulePath}.map`) : "",
           },
         });
       }
@@ -88,10 +136,10 @@ export class DevServer {
     if (url.pathname.endsWith(".map")) {
       const modulePath = url.pathname.slice(0, -4);
       const output = this.builder.getOutput(modulePath);
-      
+
       if (output?.map) {
         return new Response(output.map, {
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": mimes.json },
         });
       }
     }
@@ -100,7 +148,7 @@ export class DevServer {
     const staticResponse = await this.staticServer.serve(url.pathname);
     if (staticResponse) {
       // Inject HMR client into HTML
-      if (staticResponse.headers.get("Content-Type")?.includes("text/html")) {
+      if (staticResponse.headers.get("Content-Type")?.includes(mimes.html)) {
         const html = await staticResponse.text();
         const injected = this.injectHMRClient(html);
         return new Response(injected, {
@@ -116,32 +164,37 @@ export class DevServer {
 
   private injectHMRClient(html: string): string {
     const hmrScript = `<script type="module" src="/__hmr_client.js"></script>`;
-    
+
     // Try to inject before </head>
     if (html.includes("</head>")) {
       return html.replace("</head>", `${hmrScript}\n</head>`);
     }
-    
+
     // Otherwise inject at start of body
     if (html.includes("<body>")) {
       return html.replace("<body>", `<body>\n${hmrScript}`);
     }
-    
+
     // Last resort: prepend to document
     return hmrScript + "\n" + html;
   }
 
   private getContentType(path: string): string {
     // allow ts
-    if (path.endsWith(".ts") || path.endsWith(".tsx")) return "application/javascript";
-    if (path.endsWith(".js") || path.endsWith(".mjs")) return "application/javascript";
-    if (path.endsWith(".css") || path.endsWith(".scss") || path.endsWith(".sass")) return "text/css";
-    if (path.endsWith(".json")) return "application/json";
-    if (path.endsWith(".html")) return "text/html";
-    return "application/octet-stream";
+    if (path.endsWith(".ts") || path.endsWith(".tsx")) {
+      return mimes.js;
+    }
+    if (path.endsWith(".js") || path.endsWith(".mjs")) {
+      return mimes.js;
+    }
+    if (
+      path.endsWith(".css") || path.endsWith(".scss") || path.endsWith(".sass")
+    ) return mimes.css;
+    if (path.endsWith(".json")) return mimes.json;
+    if (path.endsWith(".html")) return mimes.html;
+    return mimes.binary;
   }
 }
-
 
 const HMR_CLIENT_CODE = Deno.readTextFileSync(
   new URL("../hmr/client.js", import.meta.url),
@@ -159,25 +212,25 @@ const HMR_CLIENT_CODE = Deno.readTextFileSync(
 
 // socket.addEventListener('message', async (event) => {
 //   const message = JSON.parse(event.data);
-  
+
 //   if (message.type === 'full-reload') {
 //     console.log('[HMR] Full reload', message.path || '');
 //     location.reload();
 //     return;
 //   }
-  
+
 //   if (message.type === 'update') {
 //     console.log('[HMR] Updating modules:', message.updates.length);
-    
+
 //     for (const update of message.updates) {
 //       try {
 //         // Create a blob URL for the new module
 //         const blob = new Blob([update.code], { type: 'application/javascript' });
 //         const url = URL.createObjectURL(blob);
-        
+
 //         // Dynamically import the new version
 //         await import(url + '?t=' + update.timestamp);
-        
+
 //         console.log('[HMR] Updated:', update.path);
 //         URL.revokeObjectURL(url);
 //       } catch (err) {
@@ -186,7 +239,7 @@ const HMR_CLIENT_CODE = Deno.readTextFileSync(
 //       }
 //     }
 //   }
-  
+
 //   if (message.type === 'error') {
 //     console.error('[HMR] Error:', message.error);
 //   }

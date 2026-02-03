@@ -65,7 +65,7 @@
 
 1. **esbuild.context() over esbuild.build()**: Enables incremental rebuilds
 2. **Event-driven architecture**: Loose coupling between subsystems
-3. **Plugin hooks**: Vite-inspired API for maximum extensibility
+3. **Plugin hooks**: DenoBoot-inspired API for maximum extensibility
 4. **In-memory dev builds**: No disk I/O during development
 5. **WebSocket HMR**: Real-time updates without polling
 

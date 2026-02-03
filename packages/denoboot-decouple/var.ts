@@ -4,20 +4,20 @@ import { DecoupleError } from "./errors.ts";
 export class DecoupledVar {
   constructor(
     private readonly key: string,
-    private readonly value: string | undefined,
+    private readonly value: string | undefined, // unparsed value from source
   ) {}
 
   private resolve<T>(
     caster: CastFn<T>,
     defaultValue?: T,
-  ): T {
-    if (this.value === undefined) {
-      if (defaultValue !== undefined) return defaultValue;
-      throw new DecoupleError(`Missing config value: ${this.key}`);
+  ) {
+    if (typeof this.value !== "string") {
+      return defaultValue as T;
+      // throw new DecoupleError(`Missing config value: ${this.key}`);
     }
 
     try {
-      return caster(this.value);
+      return caster(this.value) as T;
     } catch (err) {
       throw new DecoupleError(
         `Error parsing "${this.key}": ${(err as Error).message}`,
@@ -29,24 +29,24 @@ export class DecoupledVar {
    * Core types
    * ------------------------------------------------- */
 
-  string(defaultValue?: string): string {
-    return this.resolve(casters.string, defaultValue);
+  string<T>(defaultValue?: T) {
+    return this.resolve<T>(casters.string, defaultValue);
   }
 
-  number(defaultValue?: number): number {
-    return this.resolve(casters.number, defaultValue);
+  number<T>(defaultValue?: T) {
+    return this.resolve<T>(casters.number, defaultValue);
   }
 
-  bool(defaultValue?: boolean): boolean {
-    return this.resolve(casters.boolean, defaultValue);
+  bool<T>(defaultValue?: T, truthy: string[] = [], falsey: string[] = []) {
+    return this.resolve<T>((v) => casters.boolean(v, truthy, falsey), defaultValue);
   }
 
-  json<T = unknown>(defaultValue?: T): T {
+  json<T>(defaultValue?: T) {
     return this.resolve<T>(casters.json, defaultValue);
   }
 
-  list(defaultValue?: string[], sep = ","): string[] {
-    return this.resolve((v) => casters.list(v, sep), defaultValue);
+  list<T>(defaultValue?: T, sep = ",") {
+    return this.resolve<T>((v) => casters.list(v, sep), defaultValue);
   }
 
   /* -------------------------------------------------
@@ -70,7 +70,7 @@ export class DecoupledVar {
   match(
     pattern: RegExp,
     defaultValue?: string,
-  ): string {
+  ) {
     return this.resolve((v) => {
       if (!pattern.test(v)) {
         throw new Error(`Value does not match ${pattern}`);
@@ -83,8 +83,8 @@ export class DecoupledVar {
    * Required / raw access
    * ------------------------------------------------- */
 
-  required(): string {
-    if (this.value === undefined) {
+  required() {
+    if (typeof this.value !== "string") {
       throw new DecoupleError(
         `Missing required config value: ${this.key}`,
       );
@@ -92,7 +92,7 @@ export class DecoupledVar {
     return this.value;
   }
 
-  raw(): string | undefined {
+  raw() {
     return this.value;
   }
 }

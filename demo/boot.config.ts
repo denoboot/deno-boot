@@ -1,4 +1,4 @@
-import { defineBootConfig } from "@denoboot/config/mod.ts";
+import config, { defineBootConfig, fromDotEnv } from "@denoboot/config/mod.ts";
 
 // local plugins
 import { BlogPlugin } from "./plugins/blog/plugin.ts";
@@ -13,31 +13,58 @@ import { DenoKVPlugin } from "@denoboot/denokv-plugin/mod.ts";
 import { OakDashboardPlugin } from "@denoboot/oak-dashboard-plugin/mod.ts";
 import { OakFsRouterPlugin } from "@denoboot/oak-fs-router-plugin/mod.ts";
 
-export default defineBootConfig(({ config }) => ({
-  runtime: {},
-  storage: {},
-  engine: {
-    port: config.number("PORT", 8000),
-    hostname: config.string("HOSTNAME", "localhost"),
-    env: config.string("DENO_ENV", "development"),
-    logger: config.json("LOGGER", {
-      level: config.string("LOG_LEVEL", "info"),
-      useColors: config.bool("LOG_USE_COLORS", true),
-    }),
-    debug: config.bool("DEBUG", false),
+import { oakEngine } from "@denoboot/oak/mod.ts";
+
+import { createEtaRuntime } from "@denoboot/eta/mod.ts";
+
+config.extend(fromDotEnv());
+
+export default defineBootConfig({
+  client: {
+    root: "./app",
+    ssr: true,
   },
-  plugins: [
-    OakFsRouterPlugin,
-    OakDashboardPlugin,
-    MySQLPlugin,
-    SQLitePlugin,
-    DenoKVPlugin,
-    BlogPlugin,
-    AnalyticsPlugin,
-  ],
-  tenants: config.string("TENANTS_SOURCE", "./tenants.json"),
-  // middleware: [
-  //   // corsMiddleware({ origin: "*" }),
-  //   // debugMiddleware({ debug: DEBUG }),
-  // ],
-}));
+  server: () => {
+    return oakEngine({
+      port: config.number("PORT", 8443),
+      hostname: config.string("HOSTNAME", "localhost"),
+      application: {
+        plugins: [
+          MySQLPlugin,
+          SQLitePlugin,
+          DenoKVPlugin,
+          OakFsRouterPlugin,
+          OakDashboardPlugin,
+          BlogPlugin,
+          AnalyticsPlugin,
+        ],
+        middleware: [],
+        templates: {
+          engine: () => createEtaRuntime({ sources: [] }),
+        },
+      },
+      auth: {},
+      cache: {},
+      core: {},
+      csrf: {},
+      database: {
+        databases: {
+          default: {
+            client: config.string("DB_CLIENT", "sqlite"),
+            connection: config.string("DB_CONNECTION", "sqlite://db.sqlite"),
+            migrations: {
+              directory: "./migrations",
+            },
+          },
+        },
+      },
+      http: {},
+      logging: {},
+      media: {},
+      security: {},
+      sessions: {},
+      static: {},
+      tasks: {},
+    });
+  },
+});

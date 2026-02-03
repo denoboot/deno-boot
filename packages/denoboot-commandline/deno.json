@@ -1,0 +1,12 @@
+{
+  "name": "@denoboot/commandline",
+  "version": "0.0.0",
+  "description": "",
+  "exports": {
+    ".": "./mod.ts",
+    "./commandline": "./commandline.ts",
+    "./command": "./command.ts",
+    "./option": "./option.ts",
+    "./utils": "./utils.ts"
+  }
+}

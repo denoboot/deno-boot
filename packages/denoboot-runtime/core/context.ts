@@ -7,7 +7,7 @@ import type { HMREngine } from "../hmr/engine.ts";
 import type { Watcher } from "../dev/watcher.ts";
 import type { RuntimePlugin } from "./plugin.ts";
 import type { ResolvedConfig } from "../config/loader.ts";
-import { RuntimeOptions } from "./runtime.ts";
+import type { RuntimeOptions } from "./runtime.ts";
 
 export interface RuntimeContext {
   options: RuntimeOptions;

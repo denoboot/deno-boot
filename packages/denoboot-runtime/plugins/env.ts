@@ -7,7 +7,7 @@ export function envPlugin(options?: {
   prefix?: string;
   env?: Record<string, string>;
 }): RuntimePlugin {
-  const prefix = options?.prefix ?? "OAKSEED_";
+  const prefix = options?.prefix ?? "DENOBOOT_";
   const customEnv = options?.env ?? {};
 
   return {
@@ -36,10 +36,12 @@ export function envPlugin(options?: {
 
           // Add mode and dev flags
           define["import.meta.env.MODE"] = JSON.stringify(
-            build.initialOptions.minify ? "production" : "development"
+            build.initialOptions.minify ? "production" : "development",
           );
           define["import.meta.env.DEV"] = String(!build.initialOptions.minify);
-          define["import.meta.env.PROD"] = String(!!build.initialOptions.minify);
+          define["import.meta.env.PROD"] = String(
+            !!build.initialOptions.minify,
+          );
 
           build.initialOptions.define = {
             ...build.initialOptions.define,

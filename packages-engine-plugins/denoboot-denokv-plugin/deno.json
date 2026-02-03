@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/denokv-plugin",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Deno KV plugin for DenoBoot engines",
   "exports": {
     ".": "./mod.ts",

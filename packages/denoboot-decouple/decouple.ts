@@ -50,24 +50,29 @@ export class DecoupledConfig {
     return new DecoupledVar(key, this.resolveValue(key));
   }
 
-  string(key: string, defaultValue?: string) {
-    return this.get(key).string(defaultValue);
+  string<T extends string | null | undefined>(key: string, defaultValue?: T) {
+    return this.get(key).string(defaultValue) as T;
   }
 
-  number(key: string, defaultValue?: number) {
-    return this.get(key).number(defaultValue);
+  number<T extends number | null | undefined>(key: string, defaultValue?: T) {
+    return this.get(key).number(defaultValue) as T;
   }
 
-  bool(key: string, defaultValue?: boolean) {
-    return this.get(key).bool(defaultValue);
+  bool<T extends boolean | null | undefined>(
+    key: string,
+    defaultValue?: T,
+    truthy: string[] = [],
+    falsey: string[] = [],
+  ) {
+    return this.get(key).bool(defaultValue, truthy, falsey) as T;
   }
 
-  json<T = unknown>(key: string, defaultValue?: T) {
-    return this.get(key).json<T>(defaultValue);
+  json<T extends unknown | null | undefined>(key: string, defaultValue?: T) {
+    return this.get(key).json<T>(defaultValue) as T;
   }
 
-  list(key: string, defaultValue?: string[], sep = ",") {
-    return this.get(key).list(defaultValue, sep);
+  list<T extends unknown | null | undefined>(key: string, defaultValue?: T, sep = ",") {
+    return this.get(key).list(defaultValue, sep) as T;
   }
 
   require(key: string) {
@@ -107,6 +112,18 @@ export class DecoupledConfig {
       resolved: this.resolveValue(key),
       sources,
     };
+  }
+
+  explainAll() {
+    const keys = new Set<string>();
+    for (const src of this.sources) {
+      const values = this.readLayer(src);
+      for (const key of Object.keys(values)) {
+        keys.add(key);
+      }
+    }
+
+    return Array.from(keys).map((key) => this.explain(key));
   }
 }
 

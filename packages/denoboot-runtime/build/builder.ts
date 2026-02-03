@@ -16,7 +16,10 @@ export interface BuildResult {
 
 export class Builder {
   private context: esbuild.BuildContext | null = null;
-  private outputCache = new Map<string, { contents: Uint8Array; map?: string }>();
+  private outputCache = new Map<
+    string,
+    { contents: Uint8Array; map?: string }
+  >();
   private optimizer: Optimizer;
   private manifestGen: ManifestGenerator;
 
@@ -30,30 +33,30 @@ export class Builder {
 
   async initialize(): Promise<void> {
     const esbuildPlugins = this.plugins
-      .flatMap(p => p.esbuildPlugins?.() ?? []);
+      .flatMap((p) => p.esbuildPlugins?.() ?? []);
 
     const baseOptions: esbuild.BuildOptions = {
-      entryPoints: [this.config.entry],
+      entryPoints: [...this.config.entry.split(",")],
       bundle: true,
       format: "esm",
       outdir: this.config.build.outDir,
-      logLevel: 'info',
-      
+      logLevel: "info",
+
       // Dev vs prod
       minify: this.config.build.minify,
       sourcemap: this.config.build.sourcemap,
       splitting: this.config.build.splitting,
-      
+
       // Development optimizations
-    //   incremental: this.config.mode === "development",
+      //   incremental: this.config.mode === "development",
       write: this.config.mode === "production",
       metafile: true,
-      
+
       // Platform
       platform: "browser",
       target: ["esnext"],
       external: this.config.build.external,
-      
+
       plugins: esbuildPlugins,
     };
 
@@ -86,7 +89,7 @@ export class Builder {
     if (this.config.mode === "production" && result.metafile) {
       const manifest = this.manifestGen.generate(result.metafile);
       await this.manifestGen.write(manifest, this.config.build.outDir);
-      
+
       // Run post-build optimizations
       await this.optimizer.optimizeAssets(this.config.build.outDir);
     }
@@ -99,6 +102,10 @@ export class Builder {
     };
   }
 
+  transform(code: string, options: esbuild.TransformOptions) {
+    return esbuild.transform(code, options);
+  }
+
   getOutput(path: string): { contents: Uint8Array; map?: string } | null {
     return this.outputCache.get(path) ?? null;
   }
@@ -109,11 +116,11 @@ export class Builder {
   // }
 
   async dispose(): Promise<void> {
-  if (this.context) {
-    await this.context.dispose();
-    this.context = null;
+    if (this.context) {
+      await this.context.dispose();
+      this.context = null;
+    }
   }
-}
 }
 
 let started = false;

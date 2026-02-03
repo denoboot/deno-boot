@@ -1,13 +1,4 @@
 // deno-lint-ignore-file no-explicit-any
-// core/container.ts
-
-/**
- * Dependency Injection Container
- * - Sync + async resolution
- * - Singleton + factory + instance
- * - Hierarchical scoping
- * - Lifecycle management
- */
 
 export interface Disposable {
   dispose(): void | Promise<void>;
@@ -18,20 +9,20 @@ export interface Container<Entries extends Record<string, unknown> = any> {
   register<T>(name: string, instance: T): void;
   registerFactory<T, E extends Entries = Entries>(
     name: string,
-    factory: (container: Container<E>) => T | Promise<T>
+    factory: (container: Container<E>) => T | Promise<T>,
   ): void;
   registerSingleton<T, E extends Entries = Entries>(
     name: string,
-    factory: (container: Container<E>) => T | Promise<T>
+    factory: (container: Container<E>) => T | Promise<T>,
   ): void;
 
   // Resolution
   resolve<T, K extends keyof Entries = keyof Entries>(
-    name: K
+    name: K,
   ): T extends object ? T : Entries[K];
 
   resolveAsync<T, K extends keyof Entries = keyof Entries>(
-    name: K
+    name: K,
   ): Promise<T extends object ? T : Entries[K]>;
 
   has<K extends keyof Entries = keyof Entries>(name: K): boolean;
@@ -55,8 +46,7 @@ export interface Container<Entries extends Record<string, unknown> = any> {
   clear(): void;
 }
 
-type ServiceFactory<T, Entries extends Record<string, unknown>> =
-  (container: Container<Entries>) => T | Promise<T>;
+type ServiceFactory<T, Entries extends Record<string, unknown>> = (container: Container<Entries>) => T | Promise<T>;
 
 interface ServiceRegistration<T> {
   type: "instance" | "factory" | "singleton";
@@ -66,7 +56,6 @@ interface ServiceRegistration<T> {
 
 export class DIContainer<Entries extends Record<string, unknown> = Record<string, unknown>>
   implements Container<Entries> {
-
   private services = new Map<string, ServiceRegistration<unknown>>();
   private parent: DIContainer<any> | null;
   private disposed = false;
@@ -84,7 +73,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
 
   registerFactory<T, E extends Entries = Entries>(
     name: string,
-    factory: ServiceFactory<T, E>
+    factory: ServiceFactory<T, E>,
   ): void {
     this.assertAlive();
     this.services.set(name, { type: "factory", value: factory });
@@ -92,7 +81,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
 
   registerSingleton<T, E extends Entries = Entries>(
     name: string,
-    factory: ServiceFactory<T, E>
+    factory: ServiceFactory<T, E>,
   ): void {
     if (factory.toString().includes("tenant")) {
       console.warn(`[DI] Singleton '${name}' depends on tenant — this is unsafe.`);
@@ -138,7 +127,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
   }
 
   async resolveAsync<T, K extends keyof Entries = keyof Entries>(
-    name: K
+    name: K,
   ): Promise<T extends object ? T : Entries[K]> {
     type R = T extends object ? T : Entries[K];
     const reg = this.getRegistrationDeep(String(name));
@@ -153,7 +142,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
 
     if (reg.type === "factory") {
       return await Promise.resolve(
-        (reg.value as ServiceFactory<R, Entries>)(this)
+        (reg.value as ServiceFactory<R, Entries>)(this),
       );
     }
 
@@ -163,7 +152,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
     }
 
     const result = await Promise.resolve(
-      (reg.value as ServiceFactory<R, Entries>)(this)
+      (reg.value as ServiceFactory<R, Entries>)(this),
     );
 
     reg.singleton = result;
@@ -200,7 +189,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
     }
 
     const parent = this.parent.list().filter(
-      k => !this.services.has(String(k))
+      (k) => !this.services.has(String(k)),
     );
 
     return [...local, ...parent] as (keyof Entries)[];
@@ -244,7 +233,7 @@ export class DIContainer<Entries extends Record<string, unknown> = Record<string
 /* ───────────────────────────────── Factory ───────────────────────────── */
 
 export function createContainer<
-  Entries extends Record<string, unknown> = Record<string, unknown>
+  Entries extends Record<string, unknown> = Record<string, unknown>,
 >(parent?: DIContainer<any>) {
   return new DIContainer<Entries>(parent);
 }

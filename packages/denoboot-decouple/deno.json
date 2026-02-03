@@ -1,8 +1,12 @@
 {
   "name": "@denoboot/decouple",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Configuration decoupling for DenoBoot",
   "exports": {
-    "./mod.ts": "./mod.ts"
+    ".": "./mod.ts",
+    "./decouple": "./decouple.ts",
+    "./layer-strict": "./layer-strict.ts",
+    "./layer": "./layer.ts",
+    "./sources/": "./sources/"
   }
 }

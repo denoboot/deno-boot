@@ -1,4 +1,5 @@
-// modules/events.ts
+// deno-lint-ignore-file no-explicit-any
+
 /**
  * Event emitter system
  * Simple pub/sub for engine-wide events with async support
@@ -21,7 +22,18 @@ interface EventListener {
   once: boolean;
 }
 
-export class SimpleEventEmitter implements EventEmitter {
+interface IEventEmitter extends EventEmitter {}
+
+/**
+ * EventEmitter implementation
+ *
+ * Features:
+ * - Async event handling
+ * - One-time event listeners
+ * - Maximum listener limit
+ * - Event name warnings
+ */
+export class EventEmitter implements IEventEmitter {
   private events = new Map<string, Set<EventListener>>();
   private maxListeners = 10;
   private warningIssued = new Set<string>();
@@ -33,16 +45,16 @@ export class SimpleEventEmitter implements EventEmitter {
     if (!this.events.has(event)) {
       this.events.set(event, new Set());
     }
-    
+
     const listeners = this.events.get(event)!;
     listeners.add({ handler, once: false });
-    
+
     // Warn about potential memory leaks
     if (listeners.size > this.maxListeners && !this.warningIssued.has(event)) {
       console.warn(
         `Warning: Possible EventEmitter memory leak detected. ` +
-        `${listeners.size} listeners added for event "${event}". ` +
-        `Use setMaxListeners() to increase limit.`
+          `${listeners.size} listeners added for event "${event}". ` +
+          `Use setMaxListeners() to increase limit.`,
       );
       this.warningIssued.add(event);
     }
@@ -77,7 +89,7 @@ export class SimpleEventEmitter implements EventEmitter {
     if (!this.events.has(event)) {
       this.events.set(event, new Set());
     }
-    
+
     this.events.get(event)!.add({ handler, once: true });
   }
 
@@ -108,7 +120,7 @@ export class SimpleEventEmitter implements EventEmitter {
     }
 
     // Remove once listeners
-    toRemove.forEach(listener => listeners.delete(listener));
+    toRemove.forEach((listener) => listeners.delete(listener));
 
     // Wait for all async handlers to complete
     if (promises.length > 0) {
@@ -164,7 +176,7 @@ export class SimpleEventEmitter implements EventEmitter {
   listeners(event: string): EventHandler[] {
     const listeners = this.events.get(event);
     if (!listeners) return [];
-    return Array.from(listeners).map(l => l.handler);
+    return Array.from(listeners).map((l) => l.handler);
   }
 
   /**
@@ -192,10 +204,15 @@ export class SimpleEventEmitter implements EventEmitter {
 }
 
 /**
+ * @deprecated Use EventEmitter instead
+ */
+export class SimpleEventEmitter extends EventEmitter {}
+
+/**
  * Create an event emitter
  */
 export function createEventEmitter(): EventEmitter {
-  return new SimpleEventEmitter();
+  return new EventEmitter();
 }
 
 /**
@@ -210,28 +227,28 @@ export class TypedEventEmitter<EventMap extends Record<string, unknown>> {
 
   on<K extends keyof EventMap>(
     event: K,
-    handler: EventHandler<EventMap[K]>
+    handler: EventHandler<EventMap[K]>,
   ): void {
     this.emitter.on(event as string, handler);
   }
 
   off<K extends keyof EventMap>(
     event: K,
-    handler: EventHandler<EventMap[K]>
+    handler: EventHandler<EventMap[K]>,
   ): void {
     this.emitter.off(event as string, handler);
   }
 
   once<K extends keyof EventMap>(
     event: K,
-    handler: EventHandler<EventMap[K]>
+    handler: EventHandler<EventMap[K]>,
   ): void {
     this.emitter.once(event as string, handler);
   }
 
   async emit<K extends keyof EventMap>(
     event: K,
-    data: EventMap[K]
+    data: EventMap[K],
   ): Promise<void> {
     await this.emitter.emit(event as string, data);
   }
@@ -249,7 +266,7 @@ export class TypedEventEmitter<EventMap extends Record<string, unknown>> {
  * Create a typed event emitter
  */
 export function createTypedEventEmitter<
-  EventMap extends Record<string, unknown>
+  EventMap extends Record<string, unknown>,
 >(): TypedEventEmitter<EventMap> {
   return new TypedEventEmitter<EventMap>();
 }

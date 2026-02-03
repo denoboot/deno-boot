@@ -10,24 +10,42 @@ export * from "./tenant-manager.ts";
 export * from "./plugin-manager.ts";
 export * from "./worker-manager.ts";
 export * from "./router.ts";
-export * from "./runtime/mod.ts";
 
-
-export function defineBootPlugin<TAppMiddleware extends AnyMiddleware = AnyMiddleware, TRouterMiddleware extends AnyMiddleware = AnyMiddleware, TContainer extends Container = Container>($: DenoBootEnginePlugin<TAppMiddleware, TRouterMiddleware, TRouterMiddleware, TContainer>) {
-    $.routes = $.routes?.map(defineBootPluginRoute);
-    $.workers = $.workers?.map(defineBootPluginWorker);
-    $.middleware = $.middleware?.map(defineBootPluginMiddleware);
-    return $;
+export function defineBootPlugin<
+  TAppMiddleware extends AnyMiddleware = AnyMiddleware,
+  TRouterMiddleware extends AnyMiddleware = AnyMiddleware,
+  TContainer extends Container = Container,
+>(
+  $: DenoBootEnginePlugin<
+    TAppMiddleware,
+    TRouterMiddleware,
+    TRouterMiddleware,
+    TContainer
+  >,
+) {
+  $.routes = $.routes?.map(defineBootPluginRoute);
+  $.workers = $.workers?.map(defineBootPluginWorker);
+  $.middleware = $.middleware?.map(defineBootPluginMiddleware);
+  return $;
 }
 
-export function defineBootPluginRoute<TRouterMiddleware extends AnyMiddleware, TContainer extends Container>($: DenoBootRouteDefinition<TRouterMiddleware, TRouterMiddleware, TContainer>) {
-    return $;
+export function defineBootPluginRoute<
+  TRouterMiddleware extends AnyMiddleware,
+  TContainer extends Container,
+>(
+  $: DenoBootRouteDefinition<TRouterMiddleware, TRouterMiddleware, TContainer>,
+) {
+  return $;
 }
 
-export function defineBootPluginWorker($: DenoBootWorkerDefinition) {
-    return $;
+export function defineBootPluginWorker<
+  TContainer extends Container = Container,
+>($: DenoBootWorkerDefinition<TContainer>) {
+  return $;
 }
 
-export function defineBootPluginMiddleware<TAppMiddleware extends AnyMiddleware>($: TAppMiddleware) {
-    return $;
+export function defineBootPluginMiddleware<
+  TAppMiddleware extends AnyMiddleware,
+>($: TAppMiddleware) {
+  return $;
 }

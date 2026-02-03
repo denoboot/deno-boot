@@ -9,3 +9,4 @@ export { fromDenoEnv } from "./sources/deno-env.ts";
 export { fromDotEnv } from "./sources/dot-env.ts";
 export { fromDefaults } from "./sources/defaults.ts";
 export { fromObject } from "./sources/memory.ts";
+export { fromJsonFile } from "./sources/file-json.ts";

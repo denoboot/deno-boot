@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/logger",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Logger module for DenoBoot engine",
   "exports": {
     ".": "./mod.ts"

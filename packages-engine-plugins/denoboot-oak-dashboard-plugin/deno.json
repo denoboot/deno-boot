@@ -1,6 +1,6 @@
 {
   "name": "@denoboot/oak-dashboard-plugin",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Dashboard plugin for DenoBoot Oak engine",
   "exports": {
     ".": "./mod.ts",

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+echo ">>>> Running local boot script with args: $@"
+
+deno run --allow-all ../packages/denoboot-runtime/bin/boot.ts $@

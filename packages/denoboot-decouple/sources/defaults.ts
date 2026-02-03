@@ -1,5 +1,5 @@
 export function fromDefaults(
-  defaults: Record<string, string>,
+  defaults: Record<string, any>,
 ) {
   return () => defaults;
 }

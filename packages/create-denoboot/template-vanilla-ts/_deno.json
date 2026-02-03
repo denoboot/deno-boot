@@ -1,0 +1,48 @@
+{
+  "nodeModulesDir": "auto",
+
+  "imports": {
+    "~/": "./src/",
+    "~/plugins/": "./src/plugins/",
+
+    "boot/": "jsr:@denoboot/"
+  },
+
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "deno.ns"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "allowJs": true
+  },
+
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false,
+    "indentWidth": 2
+  },
+
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+
+  "tasks": {
+    "dev": "deno run -A --watch=src/,public/ dev.ts",
+    "build": "deno run -A build.ts",
+    "preview": "deno run -A preview.ts",
+    "lint": "deno lint",
+    "fmt": "deno fmt",
+    "check": "deno check src/main.tsx"
+  }
+}
